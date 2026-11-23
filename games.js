@@ -2,7 +2,7 @@
 // GET  : liste publique des jeux ajoutés par l'admin
 // POST : ajouter / supprimer un jeu, réservé à l'admin (jeton Google vérifié côté serveur)
 const CLIENT_ID = "260988431647-adjv3rtfn9jli63qdvo44gjbb41afudm.apps.googleusercontent.com";
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "glorylvz986@gmail.com").toLowerCase();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "glorylvz985@gmail.com").toLowerCase();
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const KEY = "glory_games";

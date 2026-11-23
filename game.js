@@ -71,7 +71,7 @@ function renderGame(game) {
         if (btn.dataset.url) {
           window.open(btn.dataset.url, "_blank", "noopener");
         } else {
-          alert("Le lien de téléchargement de " + game.name + " sera ajouté prochainement.");
+          alert(Prefs.t("Le lien de téléchargement de " + game.name + " sera ajouté prochainement."));
         }
       });
     });

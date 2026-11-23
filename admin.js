@@ -1,5 +1,5 @@
 // ESPACE ADMIN — ajouter / supprimer des jeux
-const ADMIN_EMAIL = "glorylvz986@gmail.com";
+const ADMIN_EMAIL = "glorylvz985@gmail.com";
 
 const gate = document.getElementById("adminGate");
 const panel = document.getElementById("adminPanel");

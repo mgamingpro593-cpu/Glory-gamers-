@@ -31,7 +31,7 @@ const auth = configured ? getAuth(initializeApp(firebaseConfig)) : null;
 const GOOGLE_CLIENT_ID = "260988431647-adjv3rtfn9jli63qdvo44gjbb41afudm.apps.googleusercontent.com";
 const useGis = !configured && !!GOOGLE_CLIENT_ID;
 const SESSION_KEY = "glory_gamers_user";
-const ADMIN_EMAIL = "glorylvz986@gmail.com"; // simple confort d'affichage : la vraie vérification se fait côté serveur
+const ADMIN_EMAIL = "glorylvz985@gmail.com"; // simple confort d'affichage : la vraie vérification se fait côté serveur
 const isAdmin = u => !!u && (u.email || "").toLowerCase() === ADMIN_EMAIL;
 
 let currentUser = null;
@@ -59,6 +59,19 @@ function toUser(u) {
     email: u.email || "",
     picture: u.photoURL || ""
   };
+}
+
+// Nom et photo choisis dans l'espace profil (enregistrés sur l'appareil)
+function viewUser() {
+  if (!currentUser) return null;
+  let p = {};
+  try {
+    p = JSON.parse(localStorage.getItem("gg_profile_" + currentUser.id)) || {};
+  } catch (e) {}
+  return Object.assign({}, currentUser, {
+    name: p.name || currentUser.name,
+    picture: p.photo || currentUser.picture
+  });
 }
 
 function getUser() {
@@ -126,7 +139,7 @@ function setupGis() {
     slot.innerHTML = "";
     google.accounts.id.renderButton(slot, {
       theme: "filled_black", size: "large", shape: "pill",
-      text: "signin_with", locale: "fr", width: 260
+      text: "signin_with", locale: window.Prefs ? Prefs.getLang() : "fr", width: 260
     });
   });
 }
@@ -311,6 +324,7 @@ function renderAuth() {
     return;
   }
 
+  const view = viewUser();
   const wrap = document.createElement("div");
   wrap.className = "user-menu";
 
@@ -318,14 +332,14 @@ function renderAuth() {
   avatar.className = "avatar-btn";
   avatar.setAttribute("aria-label", "Menu du compte");
 
-  if (currentUser.picture) {
+  if (view.picture) {
     const img = document.createElement("img");
-    img.src = currentUser.picture;
+    img.src = view.picture;
     img.alt = "";
     img.referrerPolicy = "no-referrer";
     avatar.appendChild(img);
   } else {
-    avatar.textContent = currentUser.name.charAt(0).toUpperCase();
+    avatar.textContent = view.name.charAt(0).toUpperCase();
   }
 
   const panel = document.createElement("div");
@@ -333,7 +347,7 @@ function renderAuth() {
   panel.hidden = true;
 
   const name = document.createElement("strong");
-  name.textContent = currentUser.name;
+  name.textContent = view.name;
   const email = document.createElement("span");
   email.textContent = currentUser.email;
   const out = document.createElement("button");
@@ -341,15 +355,21 @@ function renderAuth() {
   out.textContent = "Se déconnecter";
   out.addEventListener("click", logout);
 
+  const profileLink = document.createElement("a");
+  profileLink.className = "profile-link";
+  profileLink.href = "profile.html";
+  profileLink.textContent = "👤 Mon profil";
+
+  const items = [name, email, profileLink];
   if (isAdmin(currentUser)) {
     const adminLink = document.createElement("a");
     adminLink.className = "admin-link";
     adminLink.href = "admin.html";
     adminLink.textContent = "⚙ Espace admin";
-    panel.append(name, email, adminLink, out);
-  } else {
-    panel.append(name, email, out);
+    items.push(adminLink);
   }
+  items.push(out);
+  panel.append(...items);
   wrap.append(avatar, panel);
   area.appendChild(wrap);
 
@@ -363,6 +383,7 @@ function renderAuth() {
 }
 
 window.Auth = { getUser, requireLogin, openLogin, logout };
+window.addEventListener("profile-changed", renderAuth);
 
 // ---------- Démarrage ----------
 if (useGis) {

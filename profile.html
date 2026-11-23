@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <meta name="robots" content="noindex">
+  <title>Mon profil - Glory Gamers</title>
+  <script src="prefs.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <div class="header-actions"><div id="authArea"></div></div>
+  </header>
+
+  <main class="game-page admin-page">
+    <a href="index.html" class="back-link">‹ Retour au site</a>
+    <h1>Mon profil</h1>
+
+    <div id="profileGate" class="admin-gate"><p>Chargement…</p></div>
+
+    <div id="profilePanel" hidden>
+      <section class="admin-card">
+        <h2>Photo de profil</h2>
+        <div class="profile-photo-row">
+          <div class="big-avatar" id="bigAvatar"></div>
+          <div class="profile-photo-actions">
+            <label class="btn-secondary">Changer la photo
+              <input type="file" id="photoInput" accept="image/*" hidden>
+            </label>
+            <button type="button" class="btn-secondary" id="photoReset">Utiliser ma photo Google</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2>Informations</h2>
+        <form id="nameForm" class="admin-form">
+          <label class="full">Nom d'affichage
+            <input id="nameInput" maxlength="40" required>
+          </label>
+          <label class="full">Adresse e-mail
+            <input id="emailInput" readonly>
+          </label>
+          <button class="detail-download full" type="submit">Enregistrer</button>
+          <p class="profile-note full">Ton nom et ta photo sont enregistrés sur cet appareil.</p>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>Préférences</h2>
+        <div class="admin-form">
+          <label>Langue
+            <select id="langSelect">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>Thème
+            <select id="themeSelect">
+              <option value="dark">Sombre</option>
+              <option value="light">Clair</option>
+              <option value="auto">Automatique (appareil)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="admin-card" id="adminCard" hidden>
+        <h2>Espace admin</h2>
+        <a class="detail-download" href="admin.html">Ouvrir l'espace admin</a>
+      </section>
+
+      <p class="auth-msg" id="profileMsg" hidden></p>
+    </div>
+  </main>
+
+  <script src="profile.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (window.Auth) return;
+      var area = document.getElementById("authArea");
+      if (!area) return;
+      var b = document.createElement("button");
+      b.className = "login-btn";
+      b.textContent = "Connexion";
+      b.onclick = function () { alert("La connexion n'a pas pu se charger. Ouvre le site via https://glory-gamers.vercel.app."); };
+      area.appendChild(b);
+    });
+  </script>
+</body>
+</html>
