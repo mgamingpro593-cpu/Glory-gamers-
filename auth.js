@@ -103,8 +103,22 @@ function showMessage(text, type) {
 }
 
 function handleError(error) {
+  console.error("Erreur de connexion :", error);
   if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") return;
   showMessage(ERRORS[error.code] || "Une erreur est survenue (" + (error.code || error.message) + ").", "error");
+}
+
+// Vérifie que la connexion peut fonctionner et affiche la raison sinon
+function checkReady() {
+  if (window.location.protocol === "file:") {
+    showMessage("Ouvre le site via un serveur (http://localhost ou ton domaine), pas en double-cliquant sur le fichier : Firebase ne marche pas en file://.", "error");
+    return false;
+  }
+  if (!configured) {
+    showMessage("Firebase n'est pas configuré : remplace les valeurs VOTRE_... de firebaseConfig dans auth.js par celles de ton projet.", "error");
+    return false;
+  }
+  return true;
 }
 
 function openLogin() {
@@ -112,9 +126,7 @@ function openLogin() {
   document.getElementById("authMsg").hidden = true;
   document.getElementById("authModal").hidden = false;
 
-  if (!configured) {
-    showMessage("Firebase n'est pas encore configuré : remplis firebaseConfig dans auth.js.", "error");
-  }
+  checkReady();
 }
 
 function closeLogin() {
@@ -124,7 +136,8 @@ function closeLogin() {
 
 // ---------- Connexion Google ----------
 async function loginWithGoogle() {
-  if (!configured) return openLogin();
+  document.getElementById("authMsg").hidden = true;
+  if (!checkReady()) return;
 
   try {
     const provider = new GoogleAuthProvider();
@@ -137,7 +150,8 @@ async function loginWithGoogle() {
 
 // ---------- Connexion par lien e-mail ----------
 async function sendLink(email) {
-  if (!configured) return openLogin();
+  document.getElementById("authMsg").hidden = true;
+  if (!checkReady()) return;
 
   const submit = document.getElementById("emailSubmit");
   submit.disabled = true;
