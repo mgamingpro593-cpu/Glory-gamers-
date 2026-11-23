@@ -16,6 +16,7 @@
     <a href="#" class="logo">GLORY <span>GAMERS</span></a>
 
     <div class="header-actions">
+      <div id="authArea"></div>
       <button class="icon-btn" id="searchToggle" aria-label="Rechercher">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
       </button>
@@ -60,7 +61,7 @@
 
       <div class="carousel" id="carousel">
         <article class="hero-card"
-          style="--cover:url('https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200')">
+          style="--cover:url('https://i.ibb.co/27zxgWcJ/images-4.jpg')">
           <div class="hero-content">
             <span class="tag">POPULAIRE</span>
             <h2>Grand Theft Auto V</h2>
@@ -70,21 +71,21 @@
         </article>
 
         <article class="hero-card"
-          style="--cover:url('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200')">
+          style="--cover:url('https://i.ibb.co/vCSYjk2t/images-7.jpg')">
           <div class="hero-content">
-            <span class="tag">ACTION</span>
-            <h2>Naruto Storm</h2>
-            <p>Retrouve des combats intenses dans l'univers Naruto.</p>
+            <span class="tag">sportN</span>
+            <h2>FC27I</h2>
+            <p>wellcom the club.</p>
             <a href="#games" class="primary-btn">Découvrir le jeu</a>
           </div>
         </article>
 
         <article class="hero-card"
-          style="--cover:url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200')">
+          style="--cover:url('https://i.ibb.co/d4t0Lm8y/images-8.jpg')">
           <div class="hero-content">
-            <span class="tag">SPORT</span>
-            <h2>eFootball</h2>
-            <p>Entre sur le terrain et construis ton équipe.</p>
+            <span class="tag">monde ouvert</span>
+            <h2>GTA VI</h2>
+            <p>Bienvenue a vice city .</p>
             <a href="#games" class="primary-btn">Découvrir le jeu</a>
           </div>
         </article>
@@ -111,7 +112,7 @@
 
       <div class="games-grid" id="gamesGrid">
 
-        <article class="game-card" data-name="Naruto Storm" data-category="Action">
+        <article class="game-card" data-id="naruto-storm" tabindex="0" role="link" aria-label="Ouvrir la page de Naruto Storm" data-name="Naruto Storm" data-category="Action">
           <div class="game-image">
             <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600"
               alt="Illustration de jeu d'action" loading="lazy">
@@ -120,11 +121,11 @@
           <div class="game-info">
             <h3>Naruto Storm</h3>
             <p>Action • Combat</p>
-            <button class="download-btn" data-game="Naruto Storm">Télécharger <span>↓</span></button>
+            <a class="download-btn" href="game.html?id=naruto-storm">Voir le jeu <span>›</span></a>
           </div>
         </article>
 
-        <article class="game-card" data-name="eFootball" data-category="Sport">
+        <article class="game-card" data-id="efootball" tabindex="0" role="link" aria-label="Ouvrir la page de eFootball" data-name="eFootball" data-category="Sport">
           <div class="game-image">
             <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600"
               alt="Illustration de football" loading="lazy">
@@ -133,11 +134,11 @@
           <div class="game-info">
             <h3>eFootball</h3>
             <p>Sport • Football</p>
-            <button class="download-btn" data-game="eFootball">Télécharger <span>↓</span></button>
+            <a class="download-btn" href="game.html?id=efootball">Voir le jeu <span>›</span></a>
           </div>
         </article>
 
-        <article class="game-card" data-name="Minecraft" data-category="Aventure">
+        <article class="game-card" data-id="minecraft" tabindex="0" role="link" aria-label="Ouvrir la page de Minecraft" data-name="Minecraft" data-category="Aventure">
           <div class="game-image">
             <img src="https://images.unsplash.com/photo-1607513746994-51f730a44832?w=600"
               alt="Illustration de jeu d'aventure" loading="lazy">
@@ -146,11 +147,11 @@
           <div class="game-info">
             <h3>Minecraft</h3>
             <p>Aventure • Construction</p>
-            <button class="download-btn" data-game="Minecraft">Télécharger <span>↓</span></button>
+            <a class="download-btn" href="game.html?id=minecraft">Voir le jeu <span>›</span></a>
           </div>
         </article>
 
-        <article class="game-card" data-name="Need for Speed" data-category="Course">
+        <article class="game-card" data-id="need-for-speed" tabindex="0" role="link" aria-label="Ouvrir la page de Need for Speed" data-name="Need for Speed" data-category="Course">
           <div class="game-image">
             <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600"
               alt="Voiture de sport" loading="lazy">
@@ -159,7 +160,7 @@
           <div class="game-info">
             <h3>Need for Speed</h3>
             <p>Course • Automobile</p>
-            <button class="download-btn" data-game="Need for Speed">Télécharger <span>↓</span></button>
+            <a class="download-btn" href="game.html?id=need-for-speed">Voir le jeu <span>›</span></a>
           </div>
         </article>
 
@@ -181,6 +182,8 @@
     <p>Une passion, un univers, des jeux.</p>
   </footer>
 
+  <script src="games.js"></script>
   <script src="script.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>

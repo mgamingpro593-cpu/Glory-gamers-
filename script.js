@@ -130,15 +130,12 @@ document.getElementById("previousSlide").addEventListener("click", () => {
 
 showSlide();
 
-// BOUTONS DE TÉLÉCHARGEMENT
-document.querySelectorAll(".download-btn").forEach(button => {
-  button.addEventListener("click", () => {
-    const game = button.dataset.game;
-
-    alert(
-      "Le lien de téléchargement de " + game +
-      " n'est pas encore configuré. Il sera ajouté prochainement."
-    );
+// OUVRIR LA PAGE D'UN JEU
+gameCards.forEach(card => {
+  const open = () => { window.location.href = "game.html?id=" + card.dataset.id; };
+  card.addEventListener("click", open);
+  card.addEventListener("keydown", e => {
+    if (e.key === "Enter") open();
   });
 });
 
