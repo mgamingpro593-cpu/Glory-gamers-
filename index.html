@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <title>Glory Gamers - Jeux vidéo</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="header">
+    <a href="#" class="logo">GLORY <span>GAMERS</span></a>
+
+    <div class="header-actions">
+      <button class="icon-btn" id="searchToggle" aria-label="Rechercher">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+      </button>
+      <button class="icon-btn" id="menuToggle" aria-label="Ouvrir le menu">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="side-menu" id="sideMenu">
+    <div class="menu-top">
+      <strong>GLORY GAMERS</strong>
+      <button id="menuClose" class="close-btn">✕</button>
+    </div>
+    <a href="#home">Accueil</a>
+    <a href="#popular">Jeux populaires</a>
+    <a href="#games">Tous les jeux</a>
+    <a href="#categories">Catégories</a>
+    <a href="#about">À propos</a>
+  </nav>
+  <div class="overlay" id="overlay"></div>
+
+  <main id="home">
+
+    <section class="search-section" id="searchSection">
+      <input type="search" id="searchInput"
+        placeholder="Rechercher un jeu..."
+        autocomplete="off">
+    </section>
+
+    <section class="hero-section" id="popular">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">À NE PAS MANQUER</span>
+          <h1>Jeux populaires</h1>
+        </div>
+        <div class="carousel-controls">
+          <button id="previousSlide" aria-label="Précédent">‹</button>
+          <button id="nextSlide" aria-label="Suivant">›</button>
+        </div>
+      </div>
+
+      <div class="carousel" id="carousel">
+        <article class="hero-card"
+          style="--cover:url('https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200')">
+          <div class="hero-content">
+            <span class="tag">POPULAIRE</span>
+            <h2>Grand Theft Auto V</h2>
+            <p>Explore un immense monde ouvert et découvre l'univers GTA.</p>
+            <a href="#games" class="primary-btn">Découvrir le jeu</a>
+          </div>
+        </article>
+
+        <article class="hero-card"
+          style="--cover:url('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200')">
+          <div class="hero-content">
+            <span class="tag">ACTION</span>
+            <h2>Naruto Storm</h2>
+            <p>Retrouve des combats intenses dans l'univers Naruto.</p>
+            <a href="#games" class="primary-btn">Découvrir le jeu</a>
+          </div>
+        </article>
+
+        <article class="hero-card"
+          style="--cover:url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200')">
+          <div class="hero-content">
+            <span class="tag">SPORT</span>
+            <h2>eFootball</h2>
+            <p>Entre sur le terrain et construis ton équipe.</p>
+            <a href="#games" class="primary-btn">Découvrir le jeu</a>
+          </div>
+        </article>
+      </div>
+      <div class="carousel-dots" id="carouselDots"></div>
+    </section>
+
+    <section class="games-section" id="games">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">TA PROCHAINE AVENTURE</span>
+          <h2>Tous les jeux</h2>
+        </div>
+        <span class="game-count" id="gameCount">4 jeux</span>
+      </div>
+
+      <div class="category-list" id="categories">
+        <button class="category active" data-category="Tous">Tous</button>
+        <button class="category" data-category="Action">Action</button>
+        <button class="category" data-category="Sport">Sport</button>
+        <button class="category" data-category="Course">Course</button>
+        <button class="category" data-category="Aventure">Aventure</button>
+      </div>
+
+      <div class="games-grid" id="gamesGrid">
+
+        <article class="game-card" data-name="Naruto Storm" data-category="Action">
+          <div class="game-image">
+            <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600"
+              alt="Illustration de jeu d'action" loading="lazy">
+            <span class="game-platform">ANDROID</span>
+          </div>
+          <div class="game-info">
+            <h3>Naruto Storm</h3>
+            <p>Action • Combat</p>
+            <button class="download-btn" data-game="Naruto Storm">Télécharger <span>↓</span></button>
+          </div>
+        </article>
+
+        <article class="game-card" data-name="eFootball" data-category="Sport">
+          <div class="game-image">
+            <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600"
+              alt="Illustration de football" loading="lazy">
+            <span class="game-platform">ANDROID</span>
+          </div>
+          <div class="game-info">
+            <h3>eFootball</h3>
+            <p>Sport • Football</p>
+            <button class="download-btn" data-game="eFootball">Télécharger <span>↓</span></button>
+          </div>
+        </article>
+
+        <article class="game-card" data-name="Minecraft" data-category="Aventure">
+          <div class="game-image">
+            <img src="https://images.unsplash.com/photo-1607513746994-51f730a44832?w=600"
+              alt="Illustration de jeu d'aventure" loading="lazy">
+            <span class="game-platform">ANDROID</span>
+          </div>
+          <div class="game-info">
+            <h3>Minecraft</h3>
+            <p>Aventure • Construction</p>
+            <button class="download-btn" data-game="Minecraft">Télécharger <span>↓</span></button>
+          </div>
+        </article>
+
+        <article class="game-card" data-name="Need for Speed" data-category="Course">
+          <div class="game-image">
+            <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600"
+              alt="Voiture de sport" loading="lazy">
+            <span class="game-platform">PC</span>
+          </div>
+          <div class="game-info">
+            <h3>Need for Speed</h3>
+            <p>Course • Automobile</p>
+            <button class="download-btn" data-game="Need for Speed">Télécharger <span>↓</span></button>
+          </div>
+        </article>
+
+      </div>
+
+      <p class="no-results" id="noResults" hidden>Aucun jeu trouvé.</p>
+    </section>
+
+    <section class="about-section" id="about">
+      <h2>Bienvenue chez Glory Gamers</h2>
+      <p>Ton espace dédié aux jeux vidéo, aux découvertes et aux aventures gaming.</p>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <a href="#" class="logo">GLORY <span>GAMERS</span></a>
+    <p>© 2026 Glory Gamers. Tous droits réservés.</p>
+    <p>Une passion, un univers, des jeux.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
