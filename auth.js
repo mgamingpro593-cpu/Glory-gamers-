@@ -28,7 +28,7 @@ const auth = configured ? getAuth(initializeApp(firebaseConfig)) : null;
 
 // Identifiant client Google (public). Sert à la connexion Google directe,
 // utilisée automatiquement tant que firebaseConfig n'est pas rempli.
-const GOOGLE_CLIENT_ID = "386284505924-vga8cj7bt4n7kp7a5429mprq5m9f7gdf.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "260988431647-adjv3rtfn9jli63qdvo44gjbb41afudm.apps.googleusercontent.com";
 const useGis = !configured && !!GOOGLE_CLIENT_ID;
 const SESSION_KEY = "glory_gamers_user";
 
