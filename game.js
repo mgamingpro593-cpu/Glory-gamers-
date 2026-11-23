@@ -1,50 +1,79 @@
 // PAGE DÉTAIL D'UN JEU
 const root = document.getElementById("gameDetail");
 const id = new URLSearchParams(window.location.search).get("id");
-const game = GAMES.find(g => g.id === id);
 
-if (!game) {
-  root.innerHTML =
-    '<a href="index.html" class="back-link">‹ Retour aux jeux</a>' +
-    '<p class="no-results">Jeu introuvable.</p>';
-} else {
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = u => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
+const para = s => esc(s).replace(/\n/g, "<br>");
+
+root.innerHTML = '<p class="no-results">Chargement…</p>';
+
+loadAllGames().then(games => {
+  const game = games.find(g => g.id === id);
+
+  if (!game) {
+    root.innerHTML =
+      '<a href="index.html" class="back-link">‹ Retour aux jeux</a>' +
+      '<p class="no-results">Jeu introuvable.</p>';
+    return;
+  }
+  renderGame(game);
+});
+
+function renderGame(game) {
   document.title = game.name + " - Glory Gamers";
 
-  const downloadHTML = '<button class="detail-download" id="downloadBtn">Télécharger ↓</button>';
+  const links = (game.downloadUrls || (game.downloadUrl ? [game.downloadUrl] : [])).map(safeUrl).filter(Boolean);
+  const shots = (game.screenshots || []).map(safeUrl).filter(Boolean);
 
-  const shotsHTML = game.screenshots.map((src, i) =>
-    '<button data-src="' + src + '" aria-label="Agrandir la capture ' + (i + 1) + '">' +
-    '<img src="' + src + '" alt="Capture d\'écran ' + (i + 1) + ' de ' + game.name + '" loading="lazy"></button>'
+  const downloadHTML = links.length
+    ? links.map((url, i) =>
+        '<button class="detail-download" data-url="' + esc(url) + '">Télécharger' +
+        (links.length > 1 ? " (lien " + (i + 1) + ")" : "") + " ↓</button>").join("")
+    : '<button class="detail-download" data-url="">Télécharger ↓</button>';
+
+  const meta = [
+    ["Plateforme", game.platform],
+    ["Taille", game.size],
+    ["Version", game.version],
+    ["Catégorie", game.category],
+    ["Développeur", game.developer]
+  ].filter(m => m[1]).map(m => '<div><small>' + m[0] + '</small><strong>' + esc(m[1]) + '</strong></div>').join("");
+
+  const shotsHTML = shots.map((src, i) =>
+    '<button data-src="' + esc(src) + '" aria-label="Agrandir la capture ' + (i + 1) + '">' +
+    '<img src="' + esc(src) + '" alt="Capture d\'écran ' + (i + 1) + ' de ' + esc(game.name) + '" loading="lazy"></button>'
   ).join("");
+
+  const cover = safeUrl(game.cover) || shots[0] || "";
 
   root.innerHTML =
     '<a href="index.html#games" class="back-link">‹ Retour aux jeux</a>' +
     '<section class="detail-top">' +
-      '<img class="detail-cover" src="' + game.cover + '" alt="Image de ' + game.name + '">' +
+      (cover ? '<img class="detail-cover" src="' + esc(cover) + '" alt="Image de ' + esc(game.name) + '">' : '<div></div>') +
       '<div class="detail-head">' +
-        '<span class="tag">' + game.category + '</span>' +
-        '<h1>' + game.name + '</h1>' +
-        '<p class="detail-genre">' + game.genre + '</p>' +
-        '<div class="detail-meta">' +
-          '<div><small>Plateforme</small><strong>' + game.platform + '</strong></div>' +
-          '<div><small>Taille</small><strong>' + game.size + '</strong></div>' +
-          '<div><small>Version</small><strong>' + game.version + '</strong></div>' +
-          '<div><small>Catégorie</small><strong>' + game.category + '</strong></div>' +
-        '</div>' +
+        '<span class="tag">' + esc(game.category) + '</span>' +
+        '<h1>' + esc(game.name) + '</h1>' +
+        '<p class="detail-genre">' + esc(game.genre || game.category) + '</p>' +
+        '<div class="detail-meta">' + meta + '</div>' +
         downloadHTML +
       '</div>' +
     '</section>' +
-    '<section class="detail-block"><h2>Description</h2><p>' + game.description + '</p></section>' +
-    '<section class="detail-block"><h2>Captures d\'écran</h2><div class="shots">' + shotsHTML + '</div></section>';
+    (game.description ? '<section class="detail-block"><h2>Description</h2><p>' + para(game.description) + '</p></section>' : '') +
+    (game.info ? '<section class="detail-block"><h2>Informations</h2><p>' + para(game.info) + '</p></section>' : '') +
+    (shots.length ? '<section class="detail-block"><h2>Captures d\'écran</h2><div class="shots">' + shotsHTML + '</div></section>' : '');
 
   // Le téléchargement demande d'être connecté avec Google
-  document.getElementById("downloadBtn").addEventListener("click", () => {
-    Auth.requireLogin(() => {
-      if (game.downloadUrl) {
-        window.open(game.downloadUrl, "_blank", "noopener");
-      } else {
-        alert("Le lien de téléchargement de " + game.name + " sera ajouté prochainement.");
-      }
+  document.querySelectorAll(".detail-download").forEach(btn => {
+    btn.addEventListener("click", () => {
+      Auth.requireLogin(() => {
+        if (btn.dataset.url) {
+          window.open(btn.dataset.url, "_blank", "noopener");
+        } else {
+          alert("Le lien de téléchargement de " + game.name + " sera ajouté prochainement.");
+        }
+      });
     });
   });
 

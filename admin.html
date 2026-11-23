@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <meta name="robots" content="noindex">
+  <title>Espace admin - Glory Gamers</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <div class="header-actions"><div id="authArea"></div></div>
+  </header>
+
+  <main class="game-page admin-page">
+    <a href="index.html" class="back-link">‹ Retour au site</a>
+    <h1>Espace admin</h1>
+
+    <div id="adminGate" class="admin-gate"><p>Chargement…</p></div>
+
+    <div id="adminPanel" hidden>
+      <section class="admin-card">
+        <h2>Ajouter un jeu</h2>
+        <form id="gameForm" class="admin-form">
+          <label>Nom du jeu *
+            <input name="name" required maxlength="80" placeholder="Ex : Naruto Storm">
+          </label>
+          <label>Catégorie
+            <select name="category">
+              <option>Action</option><option>Sport</option><option>Course</option><option>Aventure</option>
+            </select>
+          </label>
+          <label>Développeur
+            <input name="developer" maxlength="80" placeholder="Ex : Bandai Namco">
+          </label>
+          <label>Plateforme
+            <input name="platform" maxlength="30" placeholder="Android, PC…">
+          </label>
+          <label>Taille
+            <input name="size" maxlength="30" placeholder="1,2 Go">
+          </label>
+          <label>Version
+            <input name="version" maxlength="30" placeholder="1.0">
+          </label>
+          <label class="full">Description
+            <textarea name="description" rows="5" maxlength="3000"></textarea>
+          </label>
+          <label class="full">Informations (configuration requise, nouveautés, etc.)
+            <textarea name="info" rows="4" maxlength="2000"></textarea>
+          </label>
+          <label class="full">Liens de téléchargement (un par ligne)
+            <textarea name="downloadUrls" rows="3" placeholder="https://..."></textarea>
+          </label>
+          <label class="full">Image de couverture (lien)
+            <input name="cover" type="url" placeholder="https://i.ibb.co/...">
+          </label>
+          <label class="full">Captures d'écran (un lien par ligne)
+            <textarea name="screenshots" rows="4" placeholder="https://i.ibb.co/..."></textarea>
+          </label>
+          <button class="detail-download full" type="submit" id="gameSubmit">Ajouter le jeu</button>
+          <p class="auth-msg full" id="formMsg" hidden></p>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>Jeux ajoutés</h2>
+        <div id="adminList"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="admin.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (window.Auth) return;
+      var area = document.getElementById("authArea");
+      if (!area) return;
+      var b = document.createElement("button");
+      b.className = "login-btn";
+      b.textContent = "Connexion";
+      b.onclick = function () { alert("La connexion n'a pas pu se charger. Ouvre le site via https://glory-gamers.vercel.app."); };
+      area.appendChild(b);
+    });
+  </script>
+</body>
+</html>

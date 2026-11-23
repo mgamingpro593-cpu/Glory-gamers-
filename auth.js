@@ -31,6 +31,8 @@ const auth = configured ? getAuth(initializeApp(firebaseConfig)) : null;
 const GOOGLE_CLIENT_ID = "260988431647-adjv3rtfn9jli63qdvo44gjbb41afudm.apps.googleusercontent.com";
 const useGis = !configured && !!GOOGLE_CLIENT_ID;
 const SESSION_KEY = "glory_gamers_user";
+const ADMIN_EMAIL = "glorylvz986@gmail.com"; // simple confort d'affichage : la vraie vérification se fait côté serveur
+const isAdmin = u => !!u && (u.email || "").toLowerCase() === ADMIN_EMAIL;
 
 let currentUser = null;
 let authReady = !configured;
@@ -89,7 +91,7 @@ function loadGis(callback) {
 
 function handleGisCredential(response) {
   const data = parseJwt(response.credential);
-  currentUser = { id: data.sub, name: data.name || data.email, email: data.email, picture: data.picture || "" };
+  currentUser = { id: data.sub, name: data.name || data.email, email: data.email, picture: data.picture || "", token: response.credential };
   localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
   renderAuth();
   closeLogin();
@@ -293,6 +295,7 @@ function requireLogin(action) {
 
 // ---------- Affichage dans l'en-tête ----------
 function renderAuth() {
+  window.dispatchEvent(new Event("auth-changed"));
   const area = document.getElementById("authArea");
   if (!area) return;
 
@@ -338,7 +341,15 @@ function renderAuth() {
   out.textContent = "Se déconnecter";
   out.addEventListener("click", logout);
 
-  panel.append(name, email, out);
+  if (isAdmin(currentUser)) {
+    const adminLink = document.createElement("a");
+    adminLink.className = "admin-link";
+    adminLink.href = "admin.html";
+    adminLink.textContent = "⚙ Espace admin";
+    panel.append(name, email, adminLink, out);
+  } else {
+    panel.append(name, email, out);
+  }
   wrap.append(avatar, panel);
   area.appendChild(wrap);
 

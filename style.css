@@ -693,3 +693,47 @@ a.download-btn { display: block; text-align: center; }
 .auth-msg[hidden] { display: none; }
 .auth-msg.error { color: #ff8a8a !important; }
 .auth-msg.ok { color: #7ee2a8 !important; }
+
+.auth-origin { font-size: 11px !important; color: var(--muted); margin: 14px 0 0 !important; line-height: 1.5; word-break: break-word; }
+.auth-origin[hidden] { display: none; }
+
+/* ===== ESPACE ADMIN ===== */
+.admin-link {
+  display: block; padding: 10px; margin-bottom: 8px; border-radius: 8px; text-align: center;
+  background: var(--purple); color: #fff; font-weight: 700; font-size: 12px;
+}
+.admin-page h1 { margin-bottom: 22px; }
+.admin-gate {
+  background: var(--surface); border: 1px solid #27273b; border-radius: 16px;
+  padding: 30px 22px; text-align: center; display: flex; flex-direction: column; gap: 16px; align-items: center;
+}
+.admin-gate[hidden] { display: none; }
+.admin-gate p { color: var(--muted); line-height: 1.6; }
+.admin-card {
+  background: var(--surface); border: 1px solid #27273b; border-radius: 16px;
+  padding: 24px; margin-bottom: 24px;
+}
+.admin-card h2 { margin-bottom: 18px; font-size: 20px; }
+.admin-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.admin-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #cfcfdc; }
+.admin-form .full { grid-column: 1 / -1; }
+.admin-form input, .admin-form select, .admin-form textarea {
+  width: 100%; padding: 12px 14px; border-radius: 10px; outline: none;
+  border: 1px solid #34344c; background: #0e0e1c; color: #fff; font: inherit; resize: vertical;
+}
+.admin-form input:focus, .admin-form select:focus, .admin-form textarea:focus { border-color: var(--purple); }
+.admin-form .detail-download:disabled { opacity: .6; cursor: wait; }
+.detail-download + .detail-download { margin-top: 10px; }
+.admin-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid #27273b; font-size: 14px;
+}
+.admin-row:last-child { border-bottom: 0; }
+.admin-row > div { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.admin-row a { color: var(--blue); font-size: 13px; }
+.admin-row button {
+  border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  background: #3a1f2b; color: #ff9aa8; font-weight: 700; font-size: 12px;
+}
+.admin-row button:hover { background: #ff5a6e; color: #fff; }
+@media (max-width: 700px) { .admin-form { grid-template-columns: 1fr; } }

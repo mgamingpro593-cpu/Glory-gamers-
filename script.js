@@ -41,7 +41,7 @@ searchToggle.addEventListener("click", () => {
 });
 
 // FILTRAGE DES JEUX
-const gameCards = document.querySelectorAll(".game-card");
+let gameCards = [];
 const categoryButtons = document.querySelectorAll(".category");
 const noResults = document.getElementById("noResults");
 const gameCount = document.getElementById("gameCount");
@@ -130,14 +130,65 @@ document.getElementById("previousSlide").addEventListener("click", () => {
 
 showSlide();
 
-// OUVRIR LA PAGE D'UN JEU
-gameCards.forEach(card => {
-  const open = () => { window.location.href = "game.html?id=" + card.dataset.id; };
-  card.addEventListener("click", open);
-  card.addEventListener("keydown", e => {
-    if (e.key === "Enter") open();
+// AFFICHAGE DES JEUX (liste de base + jeux ajoutés depuis l'espace admin)
+const gamesGrid = document.getElementById("gamesGrid");
+
+function renderGames(games) {
+  gamesGrid.innerHTML = "";
+
+  games.forEach(game => {
+    const card = document.createElement("article");
+    card.className = "game-card";
+    card.dataset.id = game.id;
+    card.dataset.name = game.name;
+    card.dataset.category = game.category;
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    card.setAttribute("aria-label", "Ouvrir la page de " + game.name);
+
+    const imageBox = document.createElement("div");
+    imageBox.className = "game-image";
+    const img = document.createElement("img");
+    if (game.cover) img.src = game.cover;
+    img.alt = game.name;
+    img.loading = "lazy";
+    const platform = document.createElement("span");
+    platform.className = "game-platform";
+    platform.textContent = String(game.platform || "").toUpperCase();
+    imageBox.append(img, platform);
+
+    const info = document.createElement("div");
+    info.className = "game-info";
+    const title = document.createElement("h3");
+    title.textContent = game.name;
+    const genre = document.createElement("p");
+    genre.textContent = game.genre || game.category;
+    const link = document.createElement("a");
+    link.className = "download-btn";
+    link.href = "game.html?id=" + encodeURIComponent(game.id);
+    link.textContent = "Voir le jeu ";
+    const arrow = document.createElement("span");
+    arrow.textContent = "›";
+    link.appendChild(arrow);
+    info.append(title, genre, link);
+
+    card.append(imageBox, info);
+
+    const open = () => { window.location.href = link.href; };
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter") open();
+    });
+
+    gamesGrid.appendChild(card);
   });
-});
+
+  gameCards = Array.from(gamesGrid.querySelectorAll(".game-card"));
+  filterGames();
+}
+
+renderGames(GAMES);
+loadAllGames().then(renderGames);
 
 // ANNÉE AUTOMATIQUE
 const footerText = document.querySelector(".footer p");
