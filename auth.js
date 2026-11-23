@@ -26,6 +26,12 @@ const firebaseConfig = {
 const configured = !firebaseConfig.apiKey.startsWith("VOTRE");
 const auth = configured ? getAuth(initializeApp(firebaseConfig)) : null;
 
+// Identifiant client Google (public). Sert à la connexion Google directe,
+// utilisée automatiquement tant que firebaseConfig n'est pas rempli.
+const GOOGLE_CLIENT_ID = "386284505924-vga8cj7bt4n7kp7a5429mprq5m9f7gdf.apps.googleusercontent.com";
+const useGis = !configured && !!GOOGLE_CLIENT_ID;
+const SESSION_KEY = "glory_gamers_user";
+
 let currentUser = null;
 let authReady = !configured;
 let pendingAction = null;
@@ -57,6 +63,72 @@ function getUser() {
   return currentUser;
 }
 
+// ---------- Connexion Google directe (sans Firebase) ----------
+function parseJwt(token) {
+  const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+  const json = decodeURIComponent(
+    atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
+  );
+  return JSON.parse(json);
+}
+
+function loadGis(callback) {
+  if (window.google && google.accounts && google.accounts.id) return callback(true);
+
+  let script = document.getElementById("gsiScript");
+  if (!script) {
+    script = document.createElement("script");
+    script.id = "gsiScript";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    document.head.appendChild(script);
+  }
+  script.addEventListener("load", () => callback(true));
+  script.addEventListener("error", () => callback(false));
+}
+
+function handleGisCredential(response) {
+  const data = parseJwt(response.credential);
+  currentUser = { id: data.sub, name: data.name || data.email, email: data.email, picture: data.picture || "" };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+  renderAuth();
+  closeLogin();
+
+  if (pendingAction) {
+    const action = pendingAction;
+    pendingAction = null;
+    action();
+  }
+}
+
+function setupGis() {
+  document.getElementById("googleLogin").style.display = "none";
+  document.querySelector(".auth-divider").style.display = "none";
+  document.getElementById("emailForm").style.display = "none";
+
+  const slot = document.getElementById("googleBtn");
+  slot.style.display = "flex";
+
+  const origin = document.getElementById("authOrigin");
+  origin.textContent =
+    "Si Google affiche l'erreur « origin_mismatch », ajoute cette adresse dans Google Cloud > Identifiants > ton ID client > Origines JavaScript autorisées : " +
+    window.location.origin;
+  origin.hidden = false;
+
+  loadGis(ok => {
+    if (!ok) {
+      showMessage("Impossible de charger Google. Vérifie ta connexion internet.", "error");
+      return;
+    }
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGisCredential });
+    slot.innerHTML = "";
+    google.accounts.id.renderButton(slot, {
+      theme: "filled_black", size: "large", shape: "pill",
+      text: "signin_with", locale: "fr", width: 260
+    });
+  });
+}
+
 // ---------- Fenêtre de connexion ----------
 function buildModal() {
   if (document.getElementById("authModal")) return;
@@ -74,6 +146,8 @@ function buildModal() {
         '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.100C.9 16.400 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.100z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.500-5.800c-2.100 1.400-4.800 2.300-8.400 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>' +
         'Continuer avec Google' +
       '</button>' +
+      '<div id="googleBtn" style="display:none"></div>' +
+      '<p class="auth-origin" id="authOrigin" hidden></p>' +
       '<div class="auth-divider"><span>ou</span></div>' +
       '<form class="auth-form" id="emailForm">' +
         '<input type="email" id="emailInput" placeholder="ton.email@gmail.com" autocomplete="email" required>' +
@@ -114,7 +188,7 @@ function checkReady() {
     showMessage("Ouvre le site via un serveur (http://localhost ou ton domaine), pas en double-cliquant sur le fichier : Firebase ne marche pas en file://.", "error");
     return false;
   }
-  if (!configured) {
+  if (!configured && !useGis) {
     showMessage("Firebase n'est pas configuré : remplace les valeurs VOTRE_... de firebaseConfig dans auth.js par celles de ton projet.", "error");
     return false;
   }
@@ -126,7 +200,7 @@ function openLogin() {
   document.getElementById("authMsg").hidden = true;
   document.getElementById("authModal").hidden = false;
 
-  checkReady();
+  if (checkReady() && useGis) setupGis();
 }
 
 function closeLogin() {
@@ -198,6 +272,13 @@ async function completeEmailLink() {
 function logout() {
   pendingAction = null;
   if (auth) signOut(auth);
+
+  if (useGis) {
+    localStorage.removeItem(SESSION_KEY);
+    currentUser = null;
+    if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+    renderAuth();
+  }
 }
 
 // Exécute l'action si connecté, sinon ouvre la connexion puis l'exécute après
@@ -273,6 +354,13 @@ function renderAuth() {
 window.Auth = { getUser, requireLogin, openLogin, logout };
 
 // ---------- Démarrage ----------
+if (useGis) {
+  try {
+    currentUser = JSON.parse(localStorage.getItem(SESSION_KEY));
+  } catch (e) {
+    currentUser = null;
+  }
+}
 renderAuth();
 
 if (configured) {
