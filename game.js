@@ -88,7 +88,12 @@ function renderGame(game) {
     btn.addEventListener("click", () => {
       Auth.requireLogin(() => {
         if (btn.dataset.url) {
-          window.open(btn.dataset.url, "_blank", "noopener");
+          if (window.Ads && Ads.active()) {
+            Ads.open();
+            window.location.href = btn.dataset.url;
+          } else {
+            window.open(btn.dataset.url, "_blank", "noopener");
+          }
         } else {
           alert(Prefs.t("Le lien de téléchargement de " + game.name + " sera ajouté prochainement."));
         }

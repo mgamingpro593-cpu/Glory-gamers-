@@ -77,6 +77,7 @@ function checkAccess() {
   loadList();
   loadNotifs();
   runStatus();
+  if (window.loadAdminExtras) window.loadAdminExtras();
 }
 
 function setMessage(box, text, type) {
@@ -246,8 +247,8 @@ logoInput.addEventListener("change", async () => {
   if (!file.type.startsWith("image/")) return setMessage(formMsg, "Choisis un fichier image.", "error");
 
   try {
-    let data = await compressImage(file, { square: true, maxSide: 320, type: "image/png" });
-    if (data.length > 300000) data = await compressImage(file, { square: true, maxSide: 320, type: "image/jpeg" });
+    let data = await compressImage(file, { square: true, maxSide: 512, type: "image/png" });
+    if (data.length > 300000) data = await compressImage(file, { square: true, maxSide: 512, type: "image/jpeg" });
     logoData = data;
     formMsg.hidden = true;
     renderLogo();

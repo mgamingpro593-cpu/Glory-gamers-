@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <title>Abonnements - Glory Gamers</title>
+  <script src="prefs.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <div class="header-actions"><div id="authArea"></div></div>
+  </header>
+
+  <main class="game-page admin-page">
+    <a href="index.html" class="back-link">‹ Retour au site</a>
+    <span class="eyebrow">💎 PREMIUM</span>
+    <h1>Abonnements</h1>
+    <p class="labs-intro">Passe premium et profite du site sans aucune publicité.</p>
+    <p class="auth-msg ok" id="planNow" hidden></p>
+
+    <div class="plan-grid" id="planGrid"></div>
+
+    <section class="admin-card">
+      <h2>Comment ça marche ?</h2>
+      <ul class="plan-perks">
+        <li>1️⃣ Choisis ton abonnement et paie sur la page de paiement sécurisée.</li>
+        <li>2️⃣ Utilise la même adresse e-mail que ton compte Google sur le site.</li>
+        <li>3️⃣ L'équipe active ton abonnement après vérification du paiement. Écris-nous avec l'icône 💬 si besoin.</li>
+        <li>4️⃣ Les publicités disparaissent dès que ton compte est premium.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <p>Une passion, un univers, des jeux.</p>
+  </footer>
+
+  <script src="premium.js"></script>
+  <script src="notify.js" defer></script>
+  <script type="module" src="auth.js"></script>
+  <script src="account.js" defer></script>
+  <script src="ads.js" defer></script>
+  <script src="chat.js" defer></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (window.Auth) return;
+      var area = document.getElementById("authArea");
+      if (!area) return;
+      var b = document.createElement("button");
+      b.className = "login-btn";
+      b.textContent = "Connexion";
+      b.onclick = function () { alert("La connexion n'a pas pu se charger. Ouvre le site via https://glory-gamers.vercel.app."); };
+      area.appendChild(b);
+    });
+  </script>
+</body>
+</html>
