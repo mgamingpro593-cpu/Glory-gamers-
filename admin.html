@@ -25,6 +25,12 @@
 
     <div id="adminPanel" hidden>
       <section class="admin-card">
+        <h2>État du système</h2>
+        <ul class="status-list" id="statusList"><li>Vérification…</li></ul>
+        <button type="button" class="btn-secondary" id="statusRefresh">Vérifier à nouveau</button>
+      </section>
+
+      <section class="admin-card">
         <h2>Ajouter un jeu</h2>
         <form id="gameForm" class="admin-form">
           <label>Nom du jeu *

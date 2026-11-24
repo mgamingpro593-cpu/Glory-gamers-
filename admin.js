@@ -76,6 +76,7 @@ function checkAccess() {
   panel.hidden = false;
   loadList();
   loadNotifs();
+  runStatus();
 }
 
 function setMessage(box, text, type) {
@@ -85,15 +86,68 @@ function setMessage(box, text, type) {
 }
 
 async function post(url, body) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Erreur " + response.status);
-  return data;
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    throw new Error("Connexion au serveur impossible. Vérifie ton internet.");
+  }
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (data && data.error) throw new Error(data.error);
+    if (response.status === 404) throw new Error("Le serveur (dossier api) n'est pas en ligne : remets api/ et lib/ sur Vercel puis redéploie.");
+    if (response.status === 413) throw new Error("Les images sont trop lourdes pour le serveur.");
+    throw new Error("Erreur du serveur (" + response.status + "). Regarde les logs de la fonction dans Vercel.");
+  }
+  return data || {};
 }
+
+// ---------- État du système (aide à trouver pourquoi un ajout échoue) ----------
+const statusList = document.getElementById("statusList");
+
+async function runStatus() {
+  statusList.innerHTML = "";
+  const add = (ok, text) => {
+    const li = document.createElement("li");
+    li.textContent = (ok ? "✅ " : "❌ ") + text;
+    statusList.appendChild(li);
+  };
+
+  const user = window.Auth && Auth.getUser();
+  let s;
+  try {
+    const response = await fetch("/api/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: user && user.token })
+    });
+    if (response.status === 404) {
+      add(false, "Le serveur (dossier api) n'est pas en ligne : remets api/ et lib/ sur Vercel puis redéploie.");
+      return;
+    }
+    s = await response.json();
+  } catch (e) {
+    add(false, "Impossible de joindre le serveur : " + e.message);
+    return;
+  }
+
+  add(true, "Serveur en ligne.");
+
+  if (!s.dbConfigured) add(false, "Base de données non connectée : dans Vercel, onglet Storage, crée Upstash Redis et relie-le au projet, puis redéploie.");
+  else if (!s.dbRead) add(false, "Base de données injoignable : " + (s.dbError || "erreur inconnue"));
+  else if (s.dbWrite === false) add(false, "Base de données connectée mais écriture impossible : " + (s.dbError || "erreur inconnue"));
+  else add(true, "Base de données connectée" + (s.dbWrite ? " (lecture et écriture)." : "."));
+
+  if (s.adminOk) add(true, "Le serveur te reconnaît comme administrateur.");
+  else add(false, "Accès admin refusé : " + s.adminReason);
+}
+
+document.getElementById("statusRefresh").addEventListener("click", runStatus);
 
 // ---------- Images de la galerie (réduites avant l'envoi) ----------
 function readImage(file) {
@@ -328,7 +382,8 @@ form.addEventListener("submit", async e => {
     setMessage(formMsg, "Jeu ajouté ! Il apparaît maintenant sur le site.", "ok");
     loadList();
   } catch (err) {
-    setMessage(formMsg, err.message, "error");
+    setMessage(formMsg, err.message + " (détails dans « État du système » en haut de la page)", "error");
+    runStatus();
   } finally {
     submit.disabled = false;
   }

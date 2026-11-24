@@ -967,3 +967,7 @@ a.download-btn { display: block; text-align: center; }
 [data-theme="light"] .notif-item { border-bottom-color: #dcdcea; }
 [data-theme="light"] .labs-link { border-color: #d6d6e6; }
 [data-theme="light"] .field-title { color: #3b3b57; }
+
+/* ===== ADMIN : état du système ===== */
+.status-list { list-style: none; padding: 0; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.status-list li { font-size: 13px; line-height: 1.5; }

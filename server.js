@@ -32,18 +32,28 @@ function setJson(key, value) {
   return redis(["SET", key, JSON.stringify(value)]);
 }
 
-// Vérifie auprès de Google que le jeton est valide et appartient bien à l'admin
+// Vérifie auprès de Google le jeton et explique pourquoi il est refusé
+async function inspectAdmin(idToken) {
+  if (!idToken) return { ok: false, reason: "pas de jeton : déconnecte-toi puis reconnecte-toi avec Google." };
+
+  let t;
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
+    if (!response.ok) return { ok: false, reason: "Google a refusé le jeton (session expirée). Déconnecte-toi puis reconnecte-toi." };
+    t = await response.json();
+  } catch (e) {
+    return { ok: false, reason: "le serveur n'arrive pas à joindre Google." };
+  }
+
+  if (t.aud !== CLIENT_ID) return { ok: false, reason: "le jeton ne vient pas du bon ID client Google." };
+  if (String(t.email_verified) !== "true") return { ok: false, reason: "l'adresse e-mail du compte n'est pas vérifiée par Google." };
+  if (Number(t.exp) * 1000 <= Date.now()) return { ok: false, reason: "session expirée. Déconnecte-toi puis reconnecte-toi." };
+  if (String(t.email || "").toLowerCase() !== ADMIN_EMAIL) return { ok: false, reason: "le compte " + (t.email || "?") + " n'est pas autorisé." };
+  return { ok: true, reason: "" };
+}
+
 async function verifyAdmin(idToken) {
-  if (!idToken) return false;
-  const response = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
-  if (!response.ok) return false;
-  const t = await response.json();
-  return (
-    t.aud === CLIENT_ID &&
-    String(t.email_verified) === "true" &&
-    String(t.email || "").toLowerCase() === ADMIN_EMAIL &&
-    Number(t.exp) * 1000 > Date.now()
-  );
+  return (await inspectAdmin(idToken)).ok;
 }
 
 const text = (v, max) => String(v == null ? "" : v).trim().slice(0, max);
@@ -111,6 +121,6 @@ async function pushNotification(n) {
 }
 
 module.exports = {
-  hasDb, redis, getJson, setJson, verifyAdmin, text, cleanUrl, cleanMedia, mediaId,
+  hasDb, redis, getJson, setJson, verifyAdmin, inspectAdmin, text, cleanUrl, cleanMedia, mediaId,
   cleanLink, num, readBody, slug, pushNotification, NOTIF_KEY
 };
