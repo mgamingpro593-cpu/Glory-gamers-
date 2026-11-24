@@ -100,7 +100,7 @@ async function post(url, body) {
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     if (data && data.error) throw new Error(data.error);
-    if (response.status === 404) throw new Error("Le serveur (dossier api) n'est pas en ligne : vérifie que le dossier api contient games.js, image.js, notifications.js et status.js, puis redéploie.");
+    if (response.status === 404) throw new Error("Le serveur (dossier api) n'est pas en ligne : vérifie que le fichier api/[name].js est bien en ligne dans ton projet, puis redéploie.");
     if (response.status === 413) throw new Error("Les images sont trop lourdes pour le serveur.");
     throw new Error("Erreur du serveur (" + response.status + "). Regarde les logs de la fonction dans Vercel.");
   }
@@ -127,7 +127,7 @@ async function runStatus() {
       body: JSON.stringify({ idToken: user && user.token })
     });
     if (response.status === 404) {
-      add(false, "Le serveur (dossier api) n'est pas en ligne : vérifie que le dossier api contient games.js, image.js, notifications.js et status.js, puis redéploie.");
+      add(false, "Le serveur (dossier api) n'est pas en ligne : vérifie que le fichier api/[name].js est bien en ligne dans ton projet, puis redéploie.");
       return;
     }
     s = await response.json();
