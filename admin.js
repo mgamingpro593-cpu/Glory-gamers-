@@ -1,5 +1,6 @@
-// ESPACE ADMIN — ajouter / supprimer des jeux
+// ESPACE ADMIN — jeux (logo + captures depuis la galerie) et notifications
 const ADMIN_EMAIL = "glorylvz985@gmail.com";
+const MAX_SHOTS = 8;
 
 const gate = document.getElementById("adminGate");
 const panel = document.getElementById("adminPanel");
@@ -7,6 +8,22 @@ const form = document.getElementById("gameForm");
 const formMsg = document.getElementById("formMsg");
 const list = document.getElementById("adminList");
 
+const logoPreview = document.getElementById("logoPreview");
+const logoInput = document.getElementById("logoInput");
+const logoBtn = document.getElementById("logoBtn");
+const logoClear = document.getElementById("logoClear");
+const shotsPreview = document.getElementById("shotsPreview");
+const shotsInput = document.getElementById("shotsInput");
+const shotsBtn = document.getElementById("shotsBtn");
+
+const notifForm = document.getElementById("notifForm");
+const notifMsg = document.getElementById("notifMsg");
+const notifList = document.getElementById("notifList");
+
+let logoData = "";
+let shotsData = [];
+
+// ---------- Accès ----------
 function tokenExpired(token) {
   try {
     const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
@@ -58,16 +75,17 @@ function checkAccess() {
   gate.hidden = true;
   panel.hidden = false;
   loadList();
+  loadNotifs();
 }
 
-function setMessage(text, type) {
-  formMsg.textContent = text;
-  formMsg.className = "auth-msg full " + type;
-  formMsg.hidden = false;
+function setMessage(box, text, type) {
+  box.textContent = text;
+  box.className = "auth-msg full " + type;
+  box.hidden = false;
 }
 
-async function api(body) {
-  const response = await fetch("/api/games", {
+async function post(url, body) {
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -77,7 +95,132 @@ async function api(body) {
   return data;
 }
 
-// ---------- Liste des jeux ajoutés ----------
+// ---------- Images de la galerie (réduites avant l'envoi) ----------
+function readImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImage(file, { square, maxSide, type }) {
+  const img = await readImage(file);
+  let sx = 0, sy = 0, sw = img.width, sh = img.height, w, h;
+
+  if (square) {
+    const side = Math.min(img.width, img.height);
+    sx = (img.width - side) / 2;
+    sy = (img.height - side) / 2;
+    sw = sh = side;
+    w = h = Math.min(maxSide, side);
+  } else {
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    w = Math.round(img.width * scale);
+    h = Math.round(img.height * scale);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (type === "image/jpeg") {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+
+  let quality = 0.85;
+  let data = canvas.toDataURL(type, quality);
+  while (type === "image/jpeg" && data.length > 380000 && quality > 0.45) {
+    quality -= 0.1;
+    data = canvas.toDataURL(type, quality);
+  }
+  if (data.length > 500000) throw new Error("Image trop lourde.");
+  return data;
+}
+
+function renderLogo() {
+  logoPreview.innerHTML = "";
+  if (logoData) {
+    const img = document.createElement("img");
+    img.src = logoData;
+    img.alt = "";
+    logoPreview.appendChild(img);
+  } else {
+    logoPreview.textContent = "Aucun logo";
+  }
+  logoClear.hidden = !logoData;
+  logoBtn.textContent = logoData ? "Changer le logo" : "Choisir le logo";
+}
+
+function renderShots() {
+  shotsPreview.innerHTML = "";
+  shotsData.forEach((data, index) => {
+    const box = document.createElement("div");
+    box.className = "shot-thumb";
+    const img = document.createElement("img");
+    img.src = data;
+    img.alt = "";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "✕";
+    remove.setAttribute("aria-label", "Retirer");
+    remove.addEventListener("click", () => {
+      shotsData.splice(index, 1);
+      renderShots();
+    });
+    box.append(img, remove);
+    shotsPreview.appendChild(box);
+  });
+  shotsBtn.disabled = shotsData.length >= MAX_SHOTS;
+}
+
+logoBtn.addEventListener("click", () => logoInput.click());
+logoClear.addEventListener("click", () => { logoData = ""; renderLogo(); });
+
+logoInput.addEventListener("change", async () => {
+  const file = logoInput.files[0];
+  logoInput.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return setMessage(formMsg, "Choisis un fichier image.", "error");
+
+  try {
+    let data = await compressImage(file, { square: true, maxSide: 320, type: "image/png" });
+    if (data.length > 300000) data = await compressImage(file, { square: true, maxSide: 320, type: "image/jpeg" });
+    logoData = data;
+    formMsg.hidden = true;
+    renderLogo();
+  } catch (e) {
+    setMessage(formMsg, "Impossible de lire cette image.", "error");
+  }
+});
+
+shotsBtn.addEventListener("click", () => shotsInput.click());
+
+shotsInput.addEventListener("change", async () => {
+  const files = Array.from(shotsInput.files).filter(f => f.type.startsWith("image/"));
+  shotsInput.value = "";
+  formMsg.hidden = true;
+
+  for (const file of files) {
+    if (shotsData.length >= MAX_SHOTS) break;
+    try {
+      shotsData.push(await compressImage(file, { maxSide: 1280, type: "image/jpeg" }));
+      renderShots();
+    } catch (e) {
+      setMessage(formMsg, "Une image n'a pas pu être lue.", "error");
+    }
+  }
+});
+
+// ---------- Liste des jeux ----------
 async function loadList() {
   list.textContent = "Chargement…";
   try {
@@ -113,7 +256,7 @@ function renderList(games) {
       if (!confirm("Supprimer « " + game.name + " » ?")) return;
       const user = Auth.getUser();
       try {
-        await api({ action: "delete", id: game.id, idToken: user && user.token });
+        await post("/api/games", { action: "delete", id: game.id, idToken: user && user.token });
         loadList();
       } catch (err) {
         alert(err.message);
@@ -132,39 +275,139 @@ form.addEventListener("submit", async e => {
 
   const user = window.Auth && Auth.getUser();
   if (!user || !user.token || tokenExpired(user.token)) return checkAccess();
+  if (!logoData) return setMessage(formMsg, "Choisis le logo du jeu.", "error");
 
   const data = new FormData(form);
   const lines = key => String(data.get(key) || "").split("\n").map(s => s.trim()).filter(Boolean);
 
-  const game = {
-    name: data.get("name"),
-    category: data.get("category"),
-    developer: data.get("developer"),
-    platform: data.get("platform"),
-    size: data.get("size"),
-    version: data.get("version"),
-    description: data.get("description"),
-    info: data.get("info"),
-    cover: data.get("cover"),
-    screenshots: lines("screenshots"),
-    downloadUrls: lines("downloadUrls")
-  };
-
   const submit = document.getElementById("gameSubmit");
   submit.disabled = true;
-  formMsg.hidden = true;
 
   try {
-    await api({ action: "add", idToken: user.token, game });
+    const total = 1 + shotsData.length;
+    let done = 0;
+    const upload = async dataUrl => {
+      done++;
+      setMessage(formMsg, "Envoi des images (" + done + "/" + total + ")…", "ok");
+      return (await post("/api/image", { idToken: user.token, dataUrl })).url;
+    };
+
+    const logo = await upload(logoData);
+    const screenshots = [];
+    for (const shot of shotsData) screenshots.push(await upload(shot));
+
+    setMessage(formMsg, "Enregistrement du jeu…", "ok");
+    await post("/api/games", {
+      action: "add",
+      idToken: user.token,
+      notify: data.get("notify") === "on",
+      game: {
+        name: data.get("name"),
+        category: data.get("category"),
+        developer: data.get("developer"),
+        platform: data.get("platform"),
+        size: data.get("size"),
+        version: data.get("version"),
+        minAndroid: data.get("minAndroid"),
+        minRam: data.get("minRam"),
+        recRam: data.get("recRam"),
+        minStorage: data.get("minStorage"),
+        description: data.get("description"),
+        info: data.get("info"),
+        downloadUrls: lines("downloadUrls"),
+        logo,
+        screenshots
+      }
+    });
+
     form.reset();
-    setMessage("Jeu ajouté ! Il apparaît maintenant sur le site.", "ok");
+    logoData = "";
+    shotsData = [];
+    renderLogo();
+    renderShots();
+    setMessage(formMsg, "Jeu ajouté ! Il apparaît maintenant sur le site.", "ok");
     loadList();
   } catch (err) {
-    setMessage(err.message, "error");
+    setMessage(formMsg, err.message, "error");
   } finally {
     submit.disabled = false;
   }
 });
 
+// ---------- Notifications ----------
+async function loadNotifs() {
+  notifList.textContent = "Chargement…";
+  try {
+    const response = await fetch("/api/notifications", { cache: "no-store" });
+    renderNotifs(await response.json());
+  } catch (e) {
+    notifList.textContent = "Impossible de joindre le serveur (/api/notifications).";
+  }
+}
+
+function renderNotifs(items) {
+  notifList.innerHTML = "";
+  if (!items.length) {
+    notifList.textContent = "Aucune notification envoyée.";
+    return;
+  }
+
+  items.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "admin-row";
+
+    const label = document.createElement("span");
+    label.textContent = item.title + " · " + new Date(item.createdAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+
+    const actions = document.createElement("div");
+    const del = document.createElement("button");
+    del.textContent = "Supprimer";
+    del.addEventListener("click", async () => {
+      const user = Auth.getUser();
+      try {
+        await post("/api/notifications", { action: "delete", id: item.id, idToken: user && user.token });
+        loadNotifs();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    actions.appendChild(del);
+    row.append(label, actions);
+    notifList.appendChild(row);
+  });
+}
+
+notifForm.addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const user = window.Auth && Auth.getUser();
+  if (!user || !user.token || tokenExpired(user.token)) return checkAccess();
+
+  const data = new FormData(notifForm);
+  const submit = document.getElementById("notifSubmit");
+  submit.disabled = true;
+  notifMsg.hidden = true;
+
+  try {
+    await post("/api/notifications", {
+      action: "send",
+      idToken: user.token,
+      title: data.get("title"),
+      body: data.get("body"),
+      url: data.get("url")
+    });
+    notifForm.reset();
+    setMessage(notifMsg, "Notification envoyée ! Les visiteurs la verront dans la cloche.", "ok");
+    loadNotifs();
+  } catch (err) {
+    setMessage(notifMsg, err.message, "error");
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+renderLogo();
+renderShots();
 window.addEventListener("auth-changed", checkAccess);
 window.addEventListener("load", checkAccess);

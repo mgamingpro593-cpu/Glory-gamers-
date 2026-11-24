@@ -2,9 +2,11 @@
 const root = document.getElementById("gameDetail");
 const id = new URLSearchParams(window.location.search).get("id");
 
+const MEDIA_RE = /^\/api\/image\?id=[a-f0-9]{32}$/;
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const safeUrl = u => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
+const safeMedia = u => (MEDIA_RE.test(String(u || "")) || /^https?:\/\//i.test(String(u || "")) ? String(u) : "");
 const para = s => esc(s).replace(/\n/g, "<br>");
 
 root.innerHTML = '<p class="no-results">Chargement…</p>';
@@ -24,8 +26,13 @@ loadAllGames().then(games => {
 function renderGame(game) {
   document.title = game.name + " - Glory Gamers";
 
+  const en = Prefs.getLang() === "en";
+  const unit = en ? "GB" : "Go";
+  const fmt = n => (en ? String(n) : String(n).replace(".", ","));
+  const gb = n => (n ? fmt(n) + " " + unit : "");
+
   const links = (game.downloadUrls || (game.downloadUrl ? [game.downloadUrl] : [])).map(safeUrl).filter(Boolean);
-  const shots = (game.screenshots || []).map(safeUrl).filter(Boolean);
+  const shots = (game.screenshots || []).map(safeMedia).filter(Boolean);
 
   const downloadHTML = links.length
     ? links.map((url, i) =>
@@ -38,7 +45,11 @@ function renderGame(game) {
     ["Taille", game.size],
     ["Version", game.version],
     ["Catégorie", game.category],
-    ["Développeur", game.developer]
+    ["Développeur", game.developer],
+    ["Android minimum", game.minAndroid ? game.minAndroid + "+" : ""],
+    ["RAM minimum", gb(game.minRam)],
+    ["RAM recommandée", gb(game.recRam)],
+    ["Espace requis", gb(game.minStorage)]
   ].filter(m => m[1]).map(m => '<div><small>' + m[0] + '</small><strong>' + esc(m[1]) + '</strong></div>').join("");
 
   const shotsHTML = shots.map((src, i) =>
@@ -46,18 +57,26 @@ function renderGame(game) {
     '<img src="' + esc(src) + '" alt="Capture d\'écran ' + (i + 1) + ' de ' + esc(game.name) + '" loading="lazy"></button>'
   ).join("");
 
-  const cover = safeUrl(game.cover) || shots[0] || "";
+  // Logo (image envoyée depuis la galerie) ou ancienne image de couverture
+  const logo = MEDIA_RE.test(game.logo || "") ? game.logo : "";
+  const cover = safeMedia(game.cover) || shots[0] || "";
+  const coverHTML = logo
+    ? '<div class="detail-cover logo-mode" style="--bg:url(\'' + logo + '\')"><img src="' + logo + '" alt="' + esc(game.name) + '"></div>'
+    : cover
+      ? '<img class="detail-cover" src="' + esc(cover) + '" alt="Image de ' + esc(game.name) + '">'
+      : '<div></div>';
 
   root.innerHTML =
     '<a href="index.html#games" class="back-link">‹ Retour aux jeux</a>' +
     '<section class="detail-top">' +
-      (cover ? '<img class="detail-cover" src="' + esc(cover) + '" alt="Image de ' + esc(game.name) + '">' : '<div></div>') +
+      coverHTML +
       '<div class="detail-head">' +
         '<span class="tag">' + esc(game.category) + '</span>' +
         '<h1>' + esc(game.name) + '</h1>' +
         '<p class="detail-genre">' + esc(game.genre || game.category) + '</p>' +
         '<div class="detail-meta">' + meta + '</div>' +
         downloadHTML +
+        '<a class="labs-link" href="labs.html?game=' + encodeURIComponent(game.id) + '">🧪 Vérifier la compatibilité avec mon téléphone</a>' +
       '</div>' +
     '</section>' +
     (game.description ? '<section class="detail-block"><h2>Description</h2><p>' + para(game.description) + '</p></section>' : '') +

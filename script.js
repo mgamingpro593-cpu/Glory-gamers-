@@ -149,7 +149,13 @@ function renderGames(games) {
     const imageBox = document.createElement("div");
     imageBox.className = "game-image";
     const img = document.createElement("img");
-    if (game.cover) img.src = game.cover;
+    if (/^\/api\/image\?id=[a-f0-9]{32}$/.test(game.logo || "")) {
+      img.src = game.logo;
+      imageBox.classList.add("logo-mode");
+      imageBox.style.setProperty("--bg", "url('" + game.logo + "')");
+    } else if (game.cover) {
+      img.src = game.cover;
+    }
     img.alt = game.name;
     img.loading = "lazy";
     const platform = document.createElement("span");

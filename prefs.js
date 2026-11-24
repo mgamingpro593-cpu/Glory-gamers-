@@ -120,12 +120,28 @@
     "Le nom ne peut pas être vide.": "The name can't be empty.",
     "Stockage plein : impossible d'enregistrer.": "Storage full: couldn't save.",
     "Joueur": "Player",
+    "Vérifie si un jeu tourne bien sur ton téléphone. Le résultat est une estimation basée sur la configuration minimale et recommandée de chaque jeu.": "Check whether a game runs well on your phone. The result is an estimate based on each game's minimum and recommended specs.",
+    "Ton téléphone": "Your phone",
+    "Ton navigateur ne donne qu'une estimation (la RAM est arrondie et limitée à 8 Go, et certains navigateurs ne la donnent pas). Corrige les valeurs ci-dessous si besoin.": "Your browser only gives an estimate (RAM is rounded and capped at 8 GB, and some browsers don't provide it). Correct the values below if needed.",
+    "Système": "System",
+    "Ex : 12": "E.g. 12",
+    "🧪 GAME LABS": "🧪 GAME LABS",
+    "Version d'Android": "Android version",
+    "Espace libre (Go)": "Free storage (GB)",
+    "Détecter mon téléphone": "Detect my phone",
+    "Compatibilité des jeux": "Game compatibility",
+    "Android minimum": "Minimum Android",
+    "RAM minimum": "Minimum RAM",
+    "RAM recommandée": "Recommended RAM",
+    "Espace requis": "Storage required",
+    "🧪 Vérifier la compatibilité avec mon téléphone": "🧪 Check compatibility with my phone",
     "Publicité": "Advertisement",
     "Offre sponsorisée ›": "Sponsored offer ›"
   };
 
   var PATTERNS = [
     [/^(\d+) jeux$/, function (m) { return m[1] + (m[1] === "1" ? " game" : " games"); }],
+    [/^Nouveau jeu : (.+)$/, function (m) { return "New game: " + m[1]; }],
     [/^Ouvrir la page de (.+)$/, function (m) { return "Open the page of " + m[1]; }],
     [/^Afficher le jeu (\d+)$/, function (m) { return "Show game " + m[1]; }],
     [/^Agrandir la capture (\d+)$/, function (m) { return "Enlarge screenshot " + m[1]; }],
