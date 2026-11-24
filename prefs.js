@@ -119,7 +119,9 @@
     "Impossible de lire cette image.": "Couldn't read this image.",
     "Le nom ne peut pas être vide.": "The name can't be empty.",
     "Stockage plein : impossible d'enregistrer.": "Storage full: couldn't save.",
-    "Joueur": "Player"
+    "Joueur": "Player",
+    "Publicité": "Advertisement",
+    "Offre sponsorisée ›": "Sponsored offer ›"
   };
 
   var PATTERNS = [

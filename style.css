@@ -818,3 +818,20 @@ a.download-btn { display: block; text-align: center; }
 [data-theme="light"] .admin-row { border-bottom-color: #dcdcea; }
 [data-theme="light"] .admin-row button { background: #ffe3e7; color: #c62828; }
 [data-theme="light"] .btn-secondary { border-color: #d6d6e6; }
+
+/* ===== PUBLICITÉS ===== */
+.ad-section {
+  margin: 10px 6% 30px; padding: 14px; text-align: center;
+  background: var(--surface); border: 1px dashed #34344c; border-radius: 16px;
+}
+.ad-label { display: block; margin-bottom: 10px; font-size: 10px; letter-spacing: 2px; color: var(--muted); }
+.ad-section [id^="container-"] { min-height: 100px; display: flex; justify-content: center; overflow: hidden; max-width: 100%; }
+.ad-section [id^="container-"] > * { max-width: 100%; }
+.ad-direct {
+  display: inline-block; margin-top: 12px; padding: 10px 18px; border-radius: 10px;
+  background: #29213f; color: #c8b4ff; font-size: 13px; font-weight: 700; transition: .2s;
+}
+.ad-direct:hover { background: var(--purple); color: #fff; }
+[data-theme="light"] .ad-section { border-color: #cfcfe2; }
+[data-theme="light"] .ad-direct { background: #ece6ff; color: #5b2fd0; }
+[data-theme="light"] .ad-direct:hover { background: var(--purple); color: #fff; }
