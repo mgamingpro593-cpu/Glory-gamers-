@@ -1,4 +1,4 @@
-// api/[name].js : tout le serveur du site (games, image, notifications, status)
+// api/server.js : tout le serveur du site (games, image, notifications, status)
 const lib = (() => {
 const module = { exports: {} };
 const crypto = require("crypto");
