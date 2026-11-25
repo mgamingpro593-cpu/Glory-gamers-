@@ -94,6 +94,25 @@
 
   window.Account = { names: NAMES, badges: BADGES, status, api, badge, setColor };
   window.addEventListener("auth-changed", () => { cache = null; });
+
+  // Compteur « en ligne » : un battement toutes les 60 s tant que la page est visible (pas sur l'admin)
+  if (!/admin\.html$/.test(location.pathname)) {
+    let vid = "";
+    try {
+      vid = localStorage.getItem("gg_vid") || "";
+      if (!vid) { vid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem("gg_vid", vid); }
+    } catch (e) {
+      vid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+    }
+    const beat = () => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/online", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid }), keepalive: true }).catch(() => {});
+    };
+    beat();
+    setInterval(beat, 60000);
+    document.addEventListener("visibilitychange", beat);
+  }
+
 })();
 
 // Enregistre le service worker (installation de l'application + notifications)

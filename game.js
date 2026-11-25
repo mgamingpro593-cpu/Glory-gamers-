@@ -34,10 +34,15 @@ function renderGame(game) {
   const links = (game.downloadUrls || (game.downloadUrl ? [game.downloadUrl] : [])).map(safeUrl).filter(Boolean);
   const shots = (game.screenshots || []).map(safeMedia).filter(Boolean);
 
-  const downloadHTML = links.length
-    ? links.map((url, i) =>
-        '<button class="detail-download" data-url="' + esc(url) + '">Télécharger' +
-        (links.length > 1 ? " (lien " + (i + 1) + ")" : "") + " ↓</button>").join("")
+  const files = [
+    ["Télécharger l'APK", game.apkUrl],
+    ["Télécharger l'OBB", game.obbUrl],
+    ["Télécharger les DATA", game.dataUrl]
+  ].filter(f => safeUrl(f[1])).map(f => ({ label: f[0], url: safeUrl(f[1]) }));
+  links.forEach((url, i) => files.push({ label: "Télécharger" + (links.length > 1 ? " (lien " + (i + 1) + ")" : ""), url }));
+
+  const downloadHTML = files.length
+    ? files.map(f => '<button class="detail-download" data-url="' + esc(f.url) + '">' + esc(f.label) + " ↓</button>").join("")
     : '<button class="detail-download" data-url="">Télécharger ↓</button>';
 
   const meta = [

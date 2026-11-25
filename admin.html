@@ -25,6 +25,14 @@
 
     <div id="adminPanel" hidden>
       <section class="admin-card">
+        <h2>📊 En direct</h2>
+        <div class="live-grid">
+          <div><strong id="liveOnline">–</strong><small>🟢 en ligne maintenant</small></div>
+          <div><strong id="liveAccounts">–</strong><small>👥 comptes inscrits</small></div>
+        </div>
+        <p class="profile-note">Mise à jour automatique toutes les 15 secondes.</p>
+      </section>
+      <section class="admin-card">
         <h2>État du système</h2>
         <ul class="status-list" id="statusList"><li>Vérification…</li></ul>
         <button type="button" class="btn-secondary" id="statusRefresh">Vérifier à nouveau</button>
@@ -73,6 +81,15 @@
           </label>
           <label class="full">Informations (nouveautés, remarques, etc.)
             <textarea name="info" rows="4" maxlength="2000"></textarea>
+          </label>
+          <label class="full">Lien APK
+            <input name="apkUrl" maxlength="500" placeholder="https://… (fichier APK du jeu)">
+          </label>
+          <label class="full">Lien OBB (facultatif)
+            <input name="obbUrl" maxlength="500" placeholder="https://… (fichier OBB)">
+          </label>
+          <label class="full">Lien DATA (facultatif)
+            <input name="dataUrl" maxlength="500" placeholder="https://… (dossier ou fichier DATA)">
           </label>
           <label class="full">Liens de téléchargement (un par ligne)
             <textarea name="downloadUrls" rows="3" placeholder="https://..."></textarea>

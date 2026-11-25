@@ -1054,3 +1054,9 @@ a.download-btn { display: block; text-align: center; }
 .badge-box .vbadge svg { width: 28px; height: 28px; }
 .badge-pick { padding: 7px 14px; border-radius: 20px; border: 2px solid #34344c; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
 .badge-pick.on { border-color: var(--purple); background: #8b5cf622; }
+
+/* ===== STATISTIQUES EN DIRECT (admin) ===== */
+.live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.live-grid div { background: var(--surface-light); border-radius: 12px; padding: 14px; text-align: center; }
+.live-grid strong { display: block; font-size: 32px; font-weight: 800; }
+.live-grid small { color: var(--muted); font-size: 12px; }

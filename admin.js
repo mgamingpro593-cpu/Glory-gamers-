@@ -370,6 +370,9 @@ form.addEventListener("submit", async e => {
         description: data.get("description"),
         info: data.get("info"),
         downloadUrls: lines("downloadUrls"),
+        apkUrl: data.get("apkUrl"),
+        obbUrl: data.get("obbUrl"),
+        dataUrl: data.get("dataUrl"),
         logo,
         screenshots
       }

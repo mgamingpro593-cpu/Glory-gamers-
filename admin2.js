@@ -8,6 +8,20 @@
   const qList = document.getElementById("qList");
   const bugList = document.getElementById("bugList");
   let users = [];
+  const liveOnline = document.getElementById("liveOnline");
+  const liveAccounts = document.getElementById("liveAccounts");
+
+  async function loadLive() {
+    try {
+      const d = await post("/api/online", { action: "count", idToken: window.Auth && Auth.getUser() && Auth.getUser().token });
+      liveOnline.textContent = d.online;
+      liveAccounts.textContent = d.accounts;
+    } catch (e) {
+      liveOnline.textContent = "–";
+      liveAccounts.textContent = "–";
+    }
+  }
+  setInterval(() => { if (!document.hidden && typeof panel !== "undefined" && !panel.hidden) loadLive(); }, 15000);
 
   const tok = () => { const u = window.Auth && Auth.getUser(); return u && u.token; };
   const day = ms => new Date(ms).toLocaleDateString("fr-FR");
@@ -150,5 +164,5 @@
     }
   }
 
-  window.loadAdminExtras = function () { loadUsers(); loadSupport(); };
+  window.loadAdminExtras = function () { loadLive(); loadUsers(); loadSupport(); };
 })();
