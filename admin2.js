@@ -53,7 +53,10 @@
       const row = el("div", "user-row");
       const main = el("div", "user-main");
       const info = el("div");
-      info.append(el("strong", "", u.name || u.email), el("small", "", u.email + (u.lastSeen ? " · vu le " + when(u.lastSeen) : "")));
+      const nameEl = el("strong", "", u.name || u.email);
+      const vb = window.Account && Account.badge && Account.badge(u.plan, u.badgeColor);
+      if (vb) nameEl.appendChild(vb);
+      info.append(nameEl, el("small", "", u.email + (u.lastSeen ? " · vu le " + when(u.lastSeen) : "")));
       main.append(info, badge(u.plan, u.until));
 
       const ctl = el("div", "user-ctl");

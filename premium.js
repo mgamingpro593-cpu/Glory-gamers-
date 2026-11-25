@@ -9,7 +9,7 @@ const PLANS = [
       ["Accès à tous les jeux du site", true],
       ["Messagerie pour poser tes questions", true],
       ["Sans aucune publicité", false],
-      ["Badge sur ton profil", false],
+      ["Insigne ou badge à côté de ton nom", false],
       ["Réponses prioritaires", false]
     ]
   },
@@ -19,7 +19,7 @@ const PLANS = [
       ["Accès à tous les jeux du site", true],
       ["Messagerie pour poser tes questions", true],
       ["Sans aucune publicité", true],
-      ["Badge 💎 sur ton profil", true],
+      ["Insigne 💎 à côté de ton nom", true],
       ["Réponses prioritaires", true]
     ]
   },
@@ -29,7 +29,7 @@ const PLANS = [
       ["Accès à tous les jeux du site", true],
       ["Messagerie pour poser tes questions", true],
       ["Sans aucune publicité", true],
-      ["Badge 👑 sur ton profil", true],
+      ["Badge certifié ✔ à côté de ton nom, couleur au choix (bleu, vert ou noir)", true],
       ["Réponses VIP : tes questions passent en tout premier", true]
     ]
   }

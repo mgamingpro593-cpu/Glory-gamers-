@@ -35,7 +35,7 @@
       });
       if (r.ok) {
         const d = await r.json();
-        const a = { email: d.email, plan: d.plan, premium: !!d.premium, until: d.until || 0, session: d.session || "", checked: Date.now() };
+        const a = { email: d.email, plan: d.plan, premium: !!d.premium, until: d.until || 0, badgeColor: d.badgeColor || "blue", session: d.session || "", checked: Date.now() };
         try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {}
         return a;
       }
@@ -62,7 +62,37 @@
     return d;
   }
 
-  window.Account = { names: NAMES, badges: BADGES, status, api };
+  const PALETTE = { blue: "#1877f2", green: "#1fa463", black: "#111111" };
+
+  // Insigne Gamer Pro (gemme) ou badge certifié Élite (sceau + coche, couleur au choix)
+  function badge(plan, color) {
+    if (plan !== "pro" && plan !== "elite") return null;
+    const s = document.createElement("span");
+    s.dataset.key = plan + ":" + (plan === "elite" ? color || "blue" : "");
+    if (plan === "elite") {
+      const c = PALETTE[color] || PALETTE.blue;
+      const seal = '<rect x="4.5" y="4.5" width="15" height="15" rx="2.5" fill="' + c + '"';
+      s.className = "vbadge" + (color === "black" ? " black" : "");
+      s.title = "Élite Gamers : compte certifié";
+      s.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + seal + '/>' + seal + ' transform="rotate(45 12 12)"/>' +
+        '<path d="M7.6 12.4l3 3 5.9-6.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    } else {
+      s.className = "vbadge";
+      s.title = "Gamer Pro";
+      s.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z" fill="#8b5cf6"/>' +
+        '<path d="M2 9h20M9 3l3 6 3-6M12 9v12" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1"/></svg>';
+    }
+    return s;
+  }
+
+  async function setColor(color) {
+    await api("/api/me", { badgeColor: color });
+    const a = await status(true);
+    window.dispatchEvent(new Event("account-changed"));
+    return a;
+  }
+
+  window.Account = { names: NAMES, badges: BADGES, status, api, badge, setColor };
   window.addEventListener("auth-changed", () => { cache = null; });
 })();
 

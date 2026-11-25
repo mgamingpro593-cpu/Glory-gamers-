@@ -1043,3 +1043,14 @@ a.download-btn { display: block; text-align: center; }
 .plan-badge.elite { background: #3b2f10; color: #ffd166; }
 [data-theme="light"] .plan-card, [data-theme="light"] .chat-box { border-color: #dcdcea; }
 [data-theme="light"] .chat-form textarea, [data-theme="light"] .user-search, [data-theme="light"] .user-ctl select, [data-theme="light"] .sup-reply textarea { background: #fff; color: #16162a; border-color: #d6d6e6; }
+
+/* ===== BADGES ===== */
+.vbadge { display: inline-flex; vertical-align: -3px; margin-left: 5px; }
+.vbadge svg { width: 18px; height: 18px; }
+.vbadge.black { filter: drop-shadow(0 0 1.5px #fff); }
+.badge-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 14px; }
+.badge-box[hidden] { display: none; }
+.badge-box .vbadge { margin-left: 0; }
+.badge-box .vbadge svg { width: 28px; height: 28px; }
+.badge-pick { padding: 7px 14px; border-radius: 20px; border: 2px solid #34344c; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.badge-pick.on { border-color: var(--purple); background: #8b5cf622; }

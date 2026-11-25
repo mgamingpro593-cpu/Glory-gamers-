@@ -311,6 +311,9 @@ const { CLIENT_ID, hasDb, redis, getJson, setJson, verifyAdmin, text, readBody }
 const USERS = "glory_users";
 const SUPPORT = "glory_support";
 const SECRET = process.env.SESSION_SECRET || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "glory";
+const OWNER = (process.env.ADMIN_EMAIL || "glorylvz985@gmail.com").toLowerCase();
+const isOwner = u => !!u && String(u.email || "").toLowerCase() === OWNER;
+const COLORS = ["blue", "green", "black"];
 const mac = s => crypto.createHmac("sha256", SECRET).update(s).digest("hex");
 function makeSession(email) {
   const p = Buffer.from(email).toString("base64url") + "." + (Date.now() + 30 * 86400000);
@@ -348,6 +351,7 @@ async function getUser(email) {
   try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
 }
 function planOf(u) {
+  if (isOwner(u)) return "elite";
   if (!u || !u.plan || u.plan === "free") return "free";
   return u.until && u.until < Date.now() ? "free" : u.plan;
 }
@@ -381,7 +385,11 @@ const me = guard(async (body, res) => {
     await redis(["HSET", USERS, who.email, JSON.stringify(u)]);
   }
   const plan = planOf(u);
-  return res.status(200).json({ email: who.email, plan, until: u.until || 0, premium: plan !== "free", session: makeSession(who.email) });
+  if (plan === "elite" && COLORS.includes(body.badgeColor) && u.badgeColor !== body.badgeColor) {
+    u.badgeColor = body.badgeColor;
+    await redis(["HSET", USERS, who.email, JSON.stringify(u)]);
+  }
+  return res.status(200).json({ email: who.email, plan, until: isOwner(u) ? 0 : u.until || 0, premium: plan !== "free", badgeColor: u.badgeColor || "blue", session: makeSession(who.email) });
 });
 
 // /api/users : liste des utilisateurs et attribution des abonnements (admin)
@@ -394,7 +402,7 @@ const users = guard(async (body, res) => {
     vals.forEach(v => {
       try {
         const u = JSON.parse(v);
-        out.push({ email: u.email, name: u.name || "", plan: planOf(u), until: u.until || 0, lastSeen: u.lastSeen || 0, createdAt: u.createdAt || 0 });
+        out.push({ email: u.email, name: u.name || "", plan: planOf(u), until: isOwner(u) ? 0 : u.until || 0, badgeColor: u.badgeColor || "blue", lastSeen: u.lastSeen || 0, createdAt: u.createdAt || 0 });
       } catch (e) {}
     });
     out.sort((a, b) => b.lastSeen - a.lastSeen);
@@ -436,7 +444,8 @@ const support = guard(async (body, res) => {
       kind: body.kind === "bug" ? "bug" : "question",
       email: who.email,
       name: who.name || (u && u.name) || who.email.split("@")[0],
-      plan: planOf(u),
+      plan: planOf(u || { email: who.email }),
+      badgeColor: (u && u.badgeColor) || "blue",
       text: msg,
       page: text(body.page, 80),
       createdAt: Date.now(),
