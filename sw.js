@@ -17,3 +17,6 @@ self.addEventListener("notificationclick", event => {
     })
   );
 });
+
+// Requis pour que le navigateur propose d'installer le site comme application
+self.addEventListener("fetch", () => {});

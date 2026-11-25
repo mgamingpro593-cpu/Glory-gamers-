@@ -65,3 +65,6 @@
   window.Account = { names: NAMES, badges: BADGES, status, api };
   window.addEventListener("auth-changed", () => { cache = null; });
 })();
+
+// Enregistre le service worker (installation de l'application + notifications)
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
