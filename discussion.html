@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090914">
+  <title>Discussion - Glory Gamers</title>
+  <script src="prefs.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <div class="header-actions"><div id="authArea"></div></div>
+  </header>
+
+  <main class="game-page admin-page">
+    <a href="index.html" class="back-link">‹ Retour au site</a>
+    <span class="eyebrow">💬 COMMUNAUTÉ</span>
+    <h1>Discussion</h1>
+    <div class="dc-tools">
+      <span>Sois respectueux : les messages inappropriés peuvent être supprimés.</span>
+      <button type="button" class="btn-secondary" id="dcNotif" hidden>🔔 Activer les notifications</button>
+    </div>
+
+    <div class="dc-wrap">
+      <div class="dc-list" id="dcList"></div>
+      <p class="dc-note" id="dcNote" hidden></p>
+      <div class="dc-preview" id="dcPreview" hidden></div>
+      <form class="dc-form" id="dcForm" hidden>
+        <button type="button" class="dc-photo" id="dcPhotoBtn" aria-label="Envoyer une photo">📷</button>
+        <input type="file" id="dcPhotoInput" accept="image/*" hidden>
+        <textarea id="dcText" maxlength="500" placeholder="Écris ton message…" rows="1"></textarea>
+        <button type="submit" id="dcSend">Envoyer</button>
+      </form>
+      <div class="dc-login" id="dcLogin">
+        Connecte-toi avec Google pour participer à la discussion.<br>
+        <button type="button" class="login-btn" id="dcLoginBtn">Connexion</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <a href="index.html" class="logo">GLORY <span>GAMERS</span></a>
+    <p>Une passion, un univers, des jeux.</p>
+  </footer>
+
+  <script type="module" src="auth.js"></script>
+  <script src="account.js" defer></script>
+  <script src="ads.js" defer></script>
+  <script src="badge.js" defer></script>
+  <script src="community.js" defer></script>
+  <script src="discussion.js" defer></script>
+  <script src="notify.js" defer></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (window.Auth) return;
+      var area = document.getElementById("authArea");
+      if (!area) return;
+      var b = document.createElement("button");
+      b.className = "login-btn";
+      b.textContent = "Connexion";
+      b.onclick = function () { alert("La connexion n'a pas pu se charger. Ouvre le site via https://glory-gamers.vercel.app."); };
+      area.appendChild(b);
+    });
+  </script>
+</body>
+</html>

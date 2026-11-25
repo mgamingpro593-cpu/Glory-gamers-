@@ -92,7 +92,7 @@
     return a;
   }
 
-  window.Account = { names: NAMES, badges: BADGES, status, api, badge, setColor };
+  window.Account = { names: NAMES, badges: BADGES, status, api, badge, setColor, identity };
   window.addEventListener("auth-changed", () => { cache = null; });
 
   // Compteur « en ligne » : un battement toutes les 60 s tant que la page est visible (pas sur l'admin)
@@ -106,7 +106,10 @@
     }
     const beat = () => {
       if (document.visibilityState !== "visible") return;
-      fetch("/api/online", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid }), keepalive: true }).catch(() => {});
+      fetch("/api/online", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vid }), keepalive: true })
+        .then(r => r.json())
+        .then(d => { if (d && typeof d.chatSeq === "number") window.dispatchEvent(new CustomEvent("chat-seq", { detail: d.chatSeq })); })
+        .catch(() => {});
     };
     beat();
     setInterval(beat, 60000);

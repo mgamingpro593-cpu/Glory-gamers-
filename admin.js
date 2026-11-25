@@ -167,18 +167,16 @@ function readImage(file) {
 
 async function compressImage(file, { square, maxSide, type }) {
   const img = await readImage(file);
-  let sx = 0, sy = 0, sw = img.width, sh = img.height, w, h;
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const dw = Math.round(img.width * scale);
+  const dh = Math.round(img.height * scale);
+  let w = dw, h = dh, dx = 0, dy = 0;
 
   if (square) {
-    const side = Math.min(img.width, img.height);
-    sx = (img.width - side) / 2;
-    sy = (img.height - side) / 2;
-    sw = sh = side;
-    w = h = Math.min(maxSide, side);
-  } else {
-    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-    w = Math.round(img.width * scale);
-    h = Math.round(img.height * scale);
+    // Le logo est gardé en entier (aucun recadrage) : on le centre dans un carré
+    w = h = Math.max(dw, dh);
+    dx = Math.round((w - dw) / 2);
+    dy = Math.round((h - dh) / 2);
   }
 
   const canvas = document.createElement("canvas");
@@ -189,7 +187,7 @@ async function compressImage(file, { square, maxSide, type }) {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, w, h);
   }
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+  ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
 
   let quality = 0.85;
   let data = canvas.toDataURL(type, quality);

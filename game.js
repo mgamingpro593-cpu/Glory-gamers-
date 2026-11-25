@@ -94,8 +94,7 @@ function renderGame(game) {
       Auth.requireLogin(() => {
         if (btn.dataset.url) {
           if (window.Ads && Ads.active()) {
-            Ads.open();
-            window.location.href = btn.dataset.url;
+            Ads.gate(btn.dataset.url, btn.textContent.replace(/ ↓$/, ""));
           } else {
             window.open(btn.dataset.url, "_blank", "noopener");
           }
