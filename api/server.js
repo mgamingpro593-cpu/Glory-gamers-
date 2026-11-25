@@ -135,6 +135,9 @@ function cleanGame(g) {
     cover: cleanMedia(g.cover) || logo || screenshots[0] || "",
     screenshots,
     downloadUrls: cleanLinks(g.downloadUrls, 5),
+    apkUrl: cleanUrl(g.apkUrl),
+    obbUrl: cleanUrl(g.obbUrl),
+    dataUrl: cleanUrl(g.dataUrl),
     minAndroid: num(g.minAndroid, 20),
     minRam: num(g.minRam, 64),
     recRam: num(g.recRam, 64),
@@ -473,7 +476,23 @@ const support = guard(async (body, res) => {
   return res.status(400).json({ error: "Action inconnue." });
 });
 
-return { me, users, support };
+// /api/online : compteur de visiteurs en ligne (battement toutes les 60 s) et chiffres pour l'admin
+const online = guard(async (body, res) => {
+  const now = Date.now();
+  if (body.action === "count") {
+    if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+    await redis(["ZREMRANGEBYSCORE", "glory_online", "-inf", String(now - 600000)]);
+    const [on, total] = await Promise.all([redis(["ZCOUNT", "glory_online", String(now - 120000), "+inf"]), redis(["HLEN", USERS])]);
+    return res.status(200).json({ online: Number(on) || 0, accounts: Number(total) || 0 });
+  }
+  const vid = String(body.vid || "");
+  if (!/^[a-z0-9]{8,40}$/i.test(vid)) return res.status(400).json({ error: "Identifiant invalide." });
+  await redis(["ZADD", "glory_online", String(now), vid]);
+  if (Math.random() < 0.02) await redis(["ZREMRANGEBYSCORE", "glory_online", "-inf", String(now - 600000)]);
+  return res.status(200).json({ ok: true });
+});
+
+return { me, users, support, online };
 })();
 const handlers = {
   games: handleGames,
@@ -482,7 +501,8 @@ const handlers = {
   status: handleStatus,
   me: extra.me,
   users: extra.users,
-  support: extra.support
+  support: extra.support,
+  online: extra.online
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.name) || "");
