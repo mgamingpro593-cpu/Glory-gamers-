@@ -487,12 +487,85 @@ const online = guard(async (body, res) => {
   }
   const vid = String(body.vid || "");
   if (!/^[a-z0-9]{8,40}$/i.test(vid)) return res.status(400).json({ error: "Identifiant invalide." });
-  await redis(["ZADD", "glory_online", String(now), vid]);
+  const [, seq] = await Promise.all([redis(["ZADD", "glory_online", String(now), vid]), redis(["GET", "glory_chat_seq"])]);
   if (Math.random() < 0.02) await redis(["ZREMRANGEBYSCORE", "glory_online", "-inf", String(now - 600000)]);
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, chatSeq: Number(seq) || 0 });
 });
 
-return { me, users, support, online };
+// /api/chat : discussion publique (texte + photo). Lecture libre, écriture réservée aux connectés.
+const CHAT = "glory_chat";
+const CHAT_SEQ = "glory_chat_seq";
+const IMG_URL = /^\/api\/image\?id=[a-f0-9]{32}$/;
+const chat = guard(async (body, res) => {
+  if (body.action === "list") {
+    const after = Number(body.after) || 0;
+    const rows = (await redis(["LRANGE", CHAT, "0", "59"])) || [];
+    const items = rows.map(r => { try { return JSON.parse(r); } catch (e) { return null; } })
+      .filter(m => m && m.n > after).reverse();
+    const mine = readSession(body.session);
+    const emails = [...new Set(items.map(m => m.email))];
+    const found = emails.length ? (await redis(["HMGET", USERS, ...emails])) || [] : [];
+    const info = {};
+    emails.forEach((e, i) => {
+      let u = null;
+      try { u = found[i] ? JSON.parse(found[i]) : null; } catch (x) {}
+      info[e] = { plan: planOf(u || { email: e }), color: (u && u.badgeColor) || "blue" };
+    });
+    return res.status(200).json({
+      seq: items.length ? items[items.length - 1].n : after,
+      messages: items.map(m => ({
+        n: m.n, id: m.id, name: m.name, text: m.text, image: m.image || "", createdAt: m.createdAt,
+        plan: info[m.email].plan, badgeColor: info[m.email].color, mine: !!mine && m.email === mine
+      }))
+    });
+  }
+
+  if (body.action === "send") {
+    const who = await identify(body);
+    if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+    const msg = text(body.text, 500);
+    const image = IMG_URL.test(String(body.image || "")) ? String(body.image) : "";
+    if (!msg && !image) return res.status(400).json({ error: "Message vide." });
+    const free = await redis(["SET", "glory_rl:" + who.email, "1", "EX", "2", "NX"]);
+    if (!free) return res.status(429).json({ error: "Doucement : attends une seconde entre deux messages." });
+    const u = await getUser(who.email);
+    const n = Number(await redis(["INCR", CHAT_SEQ]));
+    const item = {
+      n, id: n.toString(36) + Math.random().toString(36).slice(2, 6), email: who.email,
+      name: text(who.name || (u && u.name) || who.email.split("@")[0], 40), text: msg, image, createdAt: Date.now()
+    };
+    await redis(["LPUSH", CHAT, JSON.stringify(item)]);
+    await redis(["LTRIM", CHAT, "0", "199"]);
+    return res.status(200).json({ ok: true, n });
+  }
+
+  if (body.action === "delete") {
+    if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+    const rows = (await redis(["LRANGE", CHAT, "0", "199"])) || [];
+    const hit = rows.find(r => { try { return JSON.parse(r).id === body.id; } catch (e) { return false; } });
+    if (hit) await redis(["LREM", CHAT, "1", hit]);
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(400).json({ error: "Action inconnue." });
+});
+
+// /api/chatimg : photo envoyée dans la discussion (réservée aux connectés, conservée 30 jours)
+const IMG_DATA = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+const chatimg = guard(async (body, res) => {
+  const who = await identify(body);
+  if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+  const dataUrl = String(body.dataUrl || "");
+  if (dataUrl.length > 420000) return res.status(413).json({ error: "Photo trop lourde." });
+  const m = IMG_DATA.exec(dataUrl);
+  if (!m) return res.status(400).json({ error: "Format invalide (PNG, JPEG ou WebP)." });
+  const free = await redis(["SET", "glory_rlimg:" + who.email, "1", "EX", "8", "NX"]);
+  if (!free) return res.status(429).json({ error: "Une photo à la fois : réessaie dans quelques secondes." });
+  const id = crypto.randomBytes(16).toString("hex");
+  await redis(["SET", "img:" + id, JSON.stringify({ mime: m[1], data: m[2] }), "EX", "2592000"]);
+  return res.status(200).json({ url: "/api/image?id=" + id });
+});
+
+return { me, users, support, online, chat, chatimg };
 })();
 const handlers = {
   games: handleGames,
@@ -502,7 +575,9 @@ const handlers = {
   me: extra.me,
   users: extra.users,
   support: extra.support,
-  online: extra.online
+  online: extra.online,
+  chat: extra.chat,
+  chatimg: extra.chatimg
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.name) || "");
