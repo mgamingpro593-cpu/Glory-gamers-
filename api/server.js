@@ -1,4 +1,4 @@
-// api/server.js : tout le serveur du site (games, image, notifications, status)
+// api/server.js : tout le serveur du site (games, image, notifications, status, me, users, support)
 const lib = (() => {
 const module = { exports: {} };
 const crypto = require("crypto");
@@ -102,7 +102,7 @@ async function pushNotification(n) {
   return item;
 }
 module.exports = {
-  hasDb, redis, getJson, setJson, verifyAdmin, inspectAdmin, text, cleanUrl, cleanMedia, mediaId,
+  CLIENT_ID, hasDb, redis, getJson, setJson, verifyAdmin, inspectAdmin, text, cleanUrl, cleanMedia, mediaId,
   cleanLink, num, readBody, slug, pushNotification, NOTIF_KEY
 };
 return module.exports;
@@ -305,11 +305,184 @@ module.exports = async (req, res) => {
 };
 return module.exports;
 })();
+const extra = (() => {
+const crypto = require("crypto");
+const { CLIENT_ID, hasDb, redis, getJson, setJson, verifyAdmin, text, readBody } = lib;
+const USERS = "glory_users";
+const SUPPORT = "glory_support";
+const SECRET = process.env.SESSION_SECRET || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "glory";
+const OWNER = (process.env.ADMIN_EMAIL || "glorylvz985@gmail.com").toLowerCase();
+const isOwner = u => !!u && String(u.email || "").toLowerCase() === OWNER;
+const COLORS = ["blue", "green", "black"];
+const mac = s => crypto.createHmac("sha256", SECRET).update(s).digest("hex");
+function makeSession(email) {
+  const p = Buffer.from(email).toString("base64url") + "." + (Date.now() + 30 * 86400000);
+  return p + "." + mac(p);
+}
+function readSession(s) {
+  const a = String(s || "").split(".");
+  if (a.length !== 3) return null;
+  const good = Buffer.from(mac(a[0] + "." + a[1]));
+  const got = Buffer.from(a[2]);
+  if (good.length !== got.length || !crypto.timingSafeEqual(good, got)) return null;
+  if (Number(a[1]) < Date.now()) return null;
+  return Buffer.from(a[0], "base64url").toString();
+}
+async function googleUser(idToken) {
+  if (!idToken) return null;
+  try {
+    const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
+    if (!r.ok) return null;
+    const t = await r.json();
+    if (t.aud !== CLIENT_ID || String(t.email_verified) !== "true" || Number(t.exp) * 1000 <= Date.now()) return null;
+    return { email: String(t.email || "").toLowerCase(), name: t.name || "", picture: t.picture || "" };
+  } catch (e) {
+    return null;
+  }
+}
+async function identify(body) {
+  const g = await googleUser(body.idToken);
+  if (g && g.email) return g;
+  const email = readSession(body.session);
+  return email ? { email, name: "", picture: "" } : null;
+}
+async function getUser(email) {
+  const raw = await redis(["HGET", USERS, email]);
+  try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+function planOf(u) {
+  if (isOwner(u)) return "elite";
+  if (!u || !u.plan || u.plan === "free") return "free";
+  return u.until && u.until < Date.now() ? "free" : u.plan;
+}
+const guard = fn => async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Méthode non autorisée." });
+  }
+  if (!hasDb) return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
+  try {
+    return await fn(readBody(req), res);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+};
+const denyAdmin = res => res.status(401).json({ error: "Accès refusé : reconnecte-toi avec le compte admin." });
+
+// /api/me : statut d'abonnement du visiteur connecté (et enregistrement dans la liste des utilisateurs)
+const me = guard(async (body, res) => {
+  const who = await identify(body);
+  if (!who) return res.status(401).json({ error: "Connexion requise." });
+  const now = Date.now();
+  let u = await getUser(who.email);
+  if (!u) u = { email: who.email, plan: "free", until: 0, createdAt: now, lastSeen: 0 };
+  const name = text(who.name, 80);
+  if ((name && name !== u.name) || now - (u.lastSeen || 0) > 3600000) {
+    if (name) u.name = name;
+    if (who.picture) u.picture = text(who.picture, 300);
+    u.lastSeen = now;
+    await redis(["HSET", USERS, who.email, JSON.stringify(u)]);
+  }
+  const plan = planOf(u);
+  if (plan === "elite" && COLORS.includes(body.badgeColor) && u.badgeColor !== body.badgeColor) {
+    u.badgeColor = body.badgeColor;
+    await redis(["HSET", USERS, who.email, JSON.stringify(u)]);
+  }
+  return res.status(200).json({ email: who.email, plan, until: isOwner(u) ? 0 : u.until || 0, premium: plan !== "free", badgeColor: u.badgeColor || "blue", session: makeSession(who.email) });
+});
+
+// /api/users : liste des utilisateurs et attribution des abonnements (admin)
+const users = guard(async (body, res) => {
+  if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+  if (body.action === "list") {
+    const raw = await redis(["HGETALL", USERS]);
+    const vals = Array.isArray(raw) ? raw.filter((_, i) => i % 2 === 1) : Object.values(raw || {});
+    const out = [];
+    vals.forEach(v => {
+      try {
+        const u = JSON.parse(v);
+        out.push({ email: u.email, name: u.name || "", plan: planOf(u), until: isOwner(u) ? 0 : u.until || 0, badgeColor: u.badgeColor || "blue", lastSeen: u.lastSeen || 0, createdAt: u.createdAt || 0 });
+      } catch (e) {}
+    });
+    out.sort((a, b) => b.lastSeen - a.lastSeen);
+    return res.status(200).json(out);
+  }
+  if (body.action === "setPlan") {
+    const email = text(body.email, 120).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "Adresse e-mail invalide." });
+    const plan = ["free", "pro", "elite"].includes(body.plan) ? body.plan : "free";
+    const days = Math.max(0, Math.min(3650, parseInt(body.days, 10) || 0));
+    const u = (await getUser(email)) || { email, createdAt: Date.now(), lastSeen: 0 };
+    u.plan = plan;
+    u.until = plan !== "free" && days ? Date.now() + days * 86400000 : 0;
+    await redis(["HSET", USERS, email, JSON.stringify(u)]);
+    return res.status(200).json({ ok: true, plan, until: u.until });
+  }
+  return res.status(400).json({ error: "Action inconnue." });
+});
+
+// /api/support : questions des joueurs et signalements de bugs
+const support = guard(async (body, res) => {
+  const list = await getJson(SUPPORT, []);
+
+  if (body.action === "send" || body.action === "mine") {
+    const who = await identify(body);
+    if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+    if (body.action === "mine") {
+      return res.status(200).json(list.filter(i => i.email === who.email).slice(0, 30)
+        .map(i => ({ id: i.id, kind: i.kind, text: i.text, createdAt: i.createdAt, reply: i.reply || "", repliedAt: i.repliedAt || 0 })));
+    }
+    const msg = text(body.text, 1000);
+    if (msg.length < 3) return res.status(400).json({ error: "Écris un message un peu plus long." });
+    if (list.filter(i => i.email === who.email && Date.now() - i.createdAt < 600000).length >= 5) {
+      return res.status(429).json({ error: "Trop de messages d'un coup : réessaie dans quelques minutes." });
+    }
+    const u = await getUser(who.email);
+    list.unshift({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      kind: body.kind === "bug" ? "bug" : "question",
+      email: who.email,
+      name: who.name || (u && u.name) || who.email.split("@")[0],
+      plan: planOf(u || { email: who.email }),
+      badgeColor: (u && u.badgeColor) || "blue",
+      text: msg,
+      page: text(body.page, 80),
+      createdAt: Date.now(),
+      reply: "",
+      repliedAt: 0
+    });
+    await setJson(SUPPORT, list.slice(0, 300));
+    return res.status(200).json({ ok: true });
+  }
+
+  if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+  if (body.action === "list") return res.status(200).json(list);
+  if (body.action === "reply") {
+    const item = list.find(i => i.id === body.id);
+    if (!item) return res.status(404).json({ error: "Message introuvable." });
+    item.reply = text(body.text, 1000);
+    item.repliedAt = item.reply ? Date.now() : 0;
+    await setJson(SUPPORT, list);
+    return res.status(200).json({ ok: true });
+  }
+  if (body.action === "delete") {
+    await setJson(SUPPORT, list.filter(i => i.id !== body.id));
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(400).json({ error: "Action inconnue." });
+});
+
+return { me, users, support };
+})();
 const handlers = {
   games: handleGames,
   image: handleImage,
   notifications: handleNotifications,
-  status: handleStatus
+  status: handleStatus,
+  me: extra.me,
+  users: extra.users,
+  support: extra.support
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.name) || "");
