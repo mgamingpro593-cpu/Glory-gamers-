@@ -25,6 +25,14 @@
 
     <div id="adminPanel" hidden>
       <section class="admin-card">
+        <h2>📊 En direct</h2>
+        <div class="live-grid">
+          <div><strong id="liveOnline">–</strong><small>🟢 en ligne maintenant</small></div>
+          <div><strong id="liveAccounts">–</strong><small>👥 comptes inscrits</small></div>
+        </div>
+        <p class="profile-note">Mise à jour automatique toutes les 15 secondes.</p>
+      </section>
+      <section class="admin-card">
         <h2>État du système</h2>
         <ul class="status-list" id="statusList"><li>Vérification…</li></ul>
         <button type="button" class="btn-secondary" id="statusRefresh">Vérifier à nouveau</button>
@@ -74,6 +82,15 @@
           <label class="full">Informations (nouveautés, remarques, etc.)
             <textarea name="info" rows="4" maxlength="2000"></textarea>
           </label>
+          <label class="full">Lien APK
+            <input name="apkUrl" maxlength="500" placeholder="https://… (fichier APK du jeu)">
+          </label>
+          <label class="full">Lien OBB (facultatif)
+            <input name="obbUrl" maxlength="500" placeholder="https://… (fichier OBB)">
+          </label>
+          <label class="full">Lien DATA (facultatif)
+            <input name="dataUrl" maxlength="500" placeholder="https://… (dossier ou fichier DATA)">
+          </label>
           <label class="full">Liens de téléchargement (un par ligne)
             <textarea name="downloadUrls" rows="3" placeholder="https://..."></textarea>
           </label>
@@ -94,10 +111,6 @@
             <button type="button" class="btn-secondary" id="shotsBtn">Ajouter des captures</button>
             <input type="file" id="shotsInput" accept="image/*" multiple hidden>
           </div>
-
-          <label class="full check">
-            <input type="checkbox" name="premium"> ⭐ Jeu réservé aux abonnés Premium (son lien de téléchargement est caché aux autres)
-          </label>
 
           <label class="full check">
             <input type="checkbox" name="notify" checked> Prévenir les visiteurs avec une notification
@@ -132,25 +145,43 @@
       </section>
 
       <section class="admin-card">
-        <h2>⭐ Abonnés Premium</h2>
-        <form id="premiumForm" class="admin-form">
-          <label>Adresse e-mail (Gmail) *
-            <input name="email" type="email" required placeholder="abonne@gmail.com">
+        <h2>👥 Utilisateurs et abonnements</h2>
+        <input class="user-search" id="userSearch" placeholder="Rechercher (e-mail ou nom)…">
+        <div id="userList"></div>
+        <h3 class="sub-title">Activer un abonnement avec une adresse e-mail</h3>
+        <form id="planForm" class="admin-form">
+          <label class="full">Adresse e-mail (celle du paiement) *
+            <input name="email" type="email" required placeholder="joueur@gmail.com">
           </label>
-          <label>Durée en jours (vide = sans limite)
-            <input name="days" type="number" min="1" max="3650" step="1" placeholder="Ex : 30">
+          <label>Abonnement
+            <select name="plan"><option value="pro">Gamer Pro</option><option value="elite">Élite Gamers</option><option value="free">Free Gamers (retirer)</option></select>
           </label>
-          <button class="detail-download full" type="submit" id="premiumSubmit">Ajouter l'abonné</button>
-          <p class="auth-msg full" id="premiumMsg" hidden></p>
+          <label>Durée
+            <select name="days"><option value="30">30 jours</option><option value="90">3 mois</option><option value="365">1 an</option><option value="0">À vie</option></select>
+          </label>
+          <button class="detail-download full" type="submit" id="planSubmit">Activer</button>
+          <p class="auth-msg full" id="planMsg" hidden></p>
         </form>
-        <div id="premiumList"></div>
+      </section>
+
+      <section class="admin-card">
+        <h2>💬 Questions des joueurs</h2>
+        <div id="qList"></div>
+      </section>
+
+      <section class="admin-card">
+        <h2>🐞 Bugs signalés</h2>
+        <div id="bugList"></div>
       </section>
     </div>
   </main>
 
   <script src="admin.js"></script>
+  <script src="admin2.js"></script>
   <script src="notify.js" defer></script>
   <script type="module" src="auth.js"></script>
+  <script src="account.js" defer></script>
+  <script src="badge.js" defer></script>
   <script>
     window.addEventListener("load", function () {
       if (window.Auth) return;

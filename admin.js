@@ -76,8 +76,8 @@ function checkAccess() {
   panel.hidden = false;
   loadList();
   loadNotifs();
-  loadPremium();
   runStatus();
+  if (window.loadAdminExtras) window.loadAdminExtras();
 }
 
 function setMessage(box, text, type) {
@@ -167,18 +167,16 @@ function readImage(file) {
 
 async function compressImage(file, { square, maxSide, type }) {
   const img = await readImage(file);
-  let sx = 0, sy = 0, sw = img.width, sh = img.height, w, h;
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const dw = Math.round(img.width * scale);
+  const dh = Math.round(img.height * scale);
+  let w = dw, h = dh, dx = 0, dy = 0;
 
   if (square) {
-    const side = Math.min(img.width, img.height);
-    sx = (img.width - side) / 2;
-    sy = (img.height - side) / 2;
-    sw = sh = side;
-    w = h = Math.min(maxSide, side);
-  } else {
-    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-    w = Math.round(img.width * scale);
-    h = Math.round(img.height * scale);
+    // Le logo est gardé en entier (aucun recadrage) : on le centre dans un carré
+    w = h = Math.max(dw, dh);
+    dx = Math.round((w - dw) / 2);
+    dy = Math.round((h - dh) / 2);
   }
 
   const canvas = document.createElement("canvas");
@@ -189,7 +187,7 @@ async function compressImage(file, { square, maxSide, type }) {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, w, h);
   }
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+  ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
 
   let quality = 0.85;
   let data = canvas.toDataURL(type, quality);
@@ -247,8 +245,8 @@ logoInput.addEventListener("change", async () => {
   if (!file.type.startsWith("image/")) return setMessage(formMsg, "Choisis un fichier image.", "error");
 
   try {
-    let data = await compressImage(file, { square: true, maxSide: 320, type: "image/png" });
-    if (data.length > 300000) data = await compressImage(file, { square: true, maxSide: 320, type: "image/jpeg" });
+    let data = await compressImage(file, { square: true, maxSide: 512, type: "image/png" });
+    if (data.length > 300000) data = await compressImage(file, { square: true, maxSide: 512, type: "image/jpeg" });
     logoData = data;
     formMsg.hidden = true;
     renderLogo();
@@ -298,7 +296,7 @@ function renderList(games) {
     row.className = "admin-row";
 
     const name = document.createElement("span");
-    name.textContent = game.name + " · " + game.category + (game.premium ? " · ⭐ Premium" : "");
+    name.textContent = game.name + " · " + game.category;
 
     const actions = document.createElement("div");
     const view = document.createElement("a");
@@ -318,20 +316,7 @@ function renderList(games) {
       }
     });
 
-    const toggle = document.createElement("button");
-    toggle.style.cssText = "background:#29213f;color:#c8b4ff";
-    toggle.textContent = game.premium ? "Rendre gratuit" : "Mettre en Premium";
-    toggle.addEventListener("click", async () => {
-      const user = Auth.getUser();
-      try {
-        await post("/api/games", { action: "premium", id: game.id, premium: !game.premium, idToken: user && user.token });
-        loadList();
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-
-    actions.append(view, toggle, del);
+    actions.append(view, del);
     row.append(name, actions);
     list.appendChild(row);
   });
@@ -383,9 +368,11 @@ form.addEventListener("submit", async e => {
         description: data.get("description"),
         info: data.get("info"),
         downloadUrls: lines("downloadUrls"),
+        apkUrl: data.get("apkUrl"),
+        obbUrl: data.get("obbUrl"),
+        dataUrl: data.get("dataUrl"),
         logo,
-        screenshots,
-        premium: data.get("premium") === "on"
+        screenshots
       }
     });
 
@@ -472,81 +459,6 @@ notifForm.addEventListener("submit", async e => {
     loadNotifs();
   } catch (err) {
     setMessage(notifMsg, err.message, "error");
-  } finally {
-    submit.disabled = false;
-  }
-});
-
-// ---------- Abonnés Premium ----------
-const premiumForm = document.getElementById("premiumForm");
-const premiumMsg = document.getElementById("premiumMsg");
-const premiumList = document.getElementById("premiumList");
-
-async function loadPremium() {
-  premiumList.textContent = "Chargement…";
-  const user = Auth.getUser();
-  try {
-    renderPremium(await post("/api/premium", { action: "list", idToken: user && user.token }));
-  } catch (e) {
-    premiumList.textContent = e.message;
-  }
-}
-
-function renderPremium(items) {
-  premiumList.innerHTML = "";
-  if (!items.length) {
-    premiumList.textContent = "Aucun abonné pour le moment.";
-    return;
-  }
-
-  items.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "admin-row";
-
-    const label = document.createElement("span");
-    const expired = item.until && item.until < Date.now();
-    label.textContent = item.email + " · " + (item.until
-      ? (expired ? "expiré le " : "jusqu'au ") + new Date(item.until).toLocaleDateString("fr-FR")
-      : "sans limite");
-
-    const actions = document.createElement("div");
-    const del = document.createElement("button");
-    del.textContent = "Retirer";
-    del.addEventListener("click", async () => {
-      if (!confirm("Retirer " + item.email + " ?")) return;
-      const user = Auth.getUser();
-      try {
-        await post("/api/premium", { action: "remove", email: item.email, idToken: user && user.token });
-        loadPremium();
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-
-    actions.appendChild(del);
-    row.append(label, actions);
-    premiumList.appendChild(row);
-  });
-}
-
-premiumForm.addEventListener("submit", async e => {
-  e.preventDefault();
-
-  const user = window.Auth && Auth.getUser();
-  if (!user || !user.token || tokenExpired(user.token)) return checkAccess();
-
-  const data = new FormData(premiumForm);
-  const submit = document.getElementById("premiumSubmit");
-  submit.disabled = true;
-  premiumMsg.hidden = true;
-
-  try {
-    await post("/api/premium", { action: "add", idToken: user.token, email: data.get("email"), days: data.get("days") });
-    premiumForm.reset();
-    setMessage(premiumMsg, "Abonné ajouté.", "ok");
-    loadPremium();
-  } catch (err) {
-    setMessage(premiumMsg, err.message, "error");
   } finally {
     submit.disabled = false;
   }
