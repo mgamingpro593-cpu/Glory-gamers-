@@ -1115,3 +1115,13 @@ a.download-btn { display: block; text-align: center; }
 .dl-go { height: 48px; border: 0; border-radius: 12px; background: var(--purple); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }
 .dl-go:disabled { background: #3a3550; color: #a9a4c0; cursor: not-allowed; }
 .dl-premium { text-align: center; font-size: 13px; font-weight: 700; color: #ffd166; padding: 6px; }
+/* Logo : réduit pour entrer entièrement dans le cadre */
+.game-image.logo-mode,
+.detail-cover.logo-mode { position: relative; display: block; overflow: hidden; }
+
+.game-image.logo-mode img,
+.detail-cover.logo-mode img {
+  position: absolute; inset: 0; margin: auto;
+  width: auto; height: 76%; max-width: 90%;
+  aspect-ratio: 1 / 1; object-fit: cover; border-radius: 18%;
+}
