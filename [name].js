@@ -29,7 +29,7 @@ async function getJson(key, fallback) {
 function setJson(key, value) {
   return redis(["SET", key, JSON.stringify(value)]);
 }
-async function inspectAdmin(idToken) {
+async function inspectUser(idToken) {
   if (!idToken) return { ok: false, reason: "pas de jeton : déconnecte-toi puis reconnecte-toi avec Google." };
   let t;
   try {
@@ -42,8 +42,22 @@ async function inspectAdmin(idToken) {
   if (t.aud !== CLIENT_ID) return { ok: false, reason: "le jeton ne vient pas du bon ID client Google." };
   if (String(t.email_verified) !== "true") return { ok: false, reason: "l'adresse e-mail du compte n'est pas vérifiée par Google." };
   if (Number(t.exp) * 1000 <= Date.now()) return { ok: false, reason: "session expirée. Déconnecte-toi puis reconnecte-toi." };
-  if (String(t.email || "").toLowerCase() !== ADMIN_EMAIL) return { ok: false, reason: "le compte " + (t.email || "?") + " n'est pas autorisé." };
-  return { ok: true, reason: "" };
+  return { ok: true, reason: "", email: String(t.email || "").toLowerCase() };
+}
+async function inspectAdmin(idToken) {
+  const user = await inspectUser(idToken);
+  if (!user.ok) return user;
+  if (user.email !== ADMIN_EMAIL) return { ok: false, reason: "le compte " + (user.email || "?") + " n'est pas autorisé." };
+  return user;
+}
+const PREMIUM_KEY = "glory_premium";
+async function premiumUntil(email) {
+  if (email === ADMIN_EMAIL) return { premium: true, until: 0 };
+  if (!hasDb) return { premium: false, until: 0 };
+  const list = await getJson(PREMIUM_KEY, []);
+  const entry = list.find(p => p.email === email);
+  if (!entry) return { premium: false, until: 0 };
+  return { premium: !entry.until || entry.until > Date.now(), until: entry.until || 0 };
 }
 async function verifyAdmin(idToken) {
   return (await inspectAdmin(idToken)).ok;
@@ -102,7 +116,7 @@ async function pushNotification(n) {
   return item;
 }
 module.exports = {
-  hasDb, redis, getJson, setJson, verifyAdmin, inspectAdmin, text, cleanUrl, cleanMedia, mediaId,
+  hasDb, redis, getJson, setJson, verifyAdmin, inspectAdmin, inspectUser, premiumUntil, PREMIUM_KEY, text, cleanUrl, cleanMedia, mediaId,
   cleanLink, num, readBody, slug, pushNotification, NOTIF_KEY
 };
 return module.exports;
@@ -139,6 +153,7 @@ function cleanGame(g) {
     minRam: num(g.minRam, 64),
     recRam: num(g.recRam, 64),
     minStorage: num(g.minStorage, 200),
+    premium: g.premium === true || g.premium === "true" || g.premium === "on",
     createdAt: Date.now()
   };
 }
@@ -149,7 +164,11 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
   }
   try {
-    if (req.method === "GET") return res.status(200).json(await getJson(KEY, []));
+    if (req.method === "GET") {
+      const list = await getJson(KEY, []);
+      // les liens des jeux Premium ne sont jamais envoyés au public
+      return res.status(200).json(list.map(g => (g.premium ? Object.assign({}, g, { downloadUrls: [] }) : g)));
+    }
     if (req.method === "POST") {
       const body = readBody(req);
       if (!(await verifyAdmin(body.idToken))) {
@@ -179,6 +198,11 @@ module.exports = async (req, res) => {
           const ids = [target.logo, target.cover].concat(target.screenshots || []).map(mediaId).filter(Boolean);
           await Promise.all([...new Set(ids)].map(id => redis(["DEL", "img:" + id])));
         }
+        return res.status(200).json({ ok: true });
+      }
+      if (body.action === "premium") {
+        const next = games.map(g => (g.id === body.id ? Object.assign({}, g, { premium: body.premium === true }) : g));
+        await setJson(KEY, next);
         return res.status(200).json({ ok: true });
       }
       return res.status(400).json({ error: "Action inconnue." });
@@ -305,7 +329,79 @@ module.exports = async (req, res) => {
 };
 return module.exports;
 })();
+const handlePremium = (() => {
+const module = { exports: {} };
+const { hasDb, getJson, setJson, inspectUser, inspectAdmin, premiumUntil, PREMIUM_KEY, readBody, num } = lib;
+module.exports = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Méthode non autorisée." });
+  }
+  try {
+    const body = readBody(req);
+    if (body.action === "me") {
+      const user = await inspectUser(body.idToken);
+      if (!user.ok) return res.status(200).json({ premium: false, reason: user.reason });
+      const info = await premiumUntil(user.email);
+      return res.status(200).json({ email: user.email, premium: info.premium, until: info.until });
+    }
+    if (!hasDb) return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
+    const admin = await inspectAdmin(body.idToken);
+    if (!admin.ok) return res.status(401).json({ error: "Accès refusé : reconnecte-toi avec le compte admin." });
+    const list = await getJson(PREMIUM_KEY, []);
+    if (body.action === "list") return res.status(200).json(list);
+    if (body.action === "add") {
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "Adresse e-mail invalide." });
+      const days = num(body.days, 3650);
+      const entry = { email, until: days ? Date.now() + days * 86400000 : 0, addedAt: Date.now() };
+      await setJson(PREMIUM_KEY, list.filter(p => p.email !== email).concat(entry));
+      return res.status(200).json(entry);
+    }
+    if (body.action === "remove") {
+      const email = String(body.email || "").trim().toLowerCase();
+      await setJson(PREMIUM_KEY, list.filter(p => p.email !== email));
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(400).json({ error: "Action inconnue." });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+};
+return module.exports;
+})();
+const handleDownload = (() => {
+const module = { exports: {} };
+const { hasDb, getJson, inspectUser, premiumUntil, readBody } = lib;
+module.exports = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Méthode non autorisée." });
+  }
+  try {
+    if (!hasDb) return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
+    const body = readBody(req);
+    const games = await getJson("glory_games", []);
+    const game = games.find(g => g.id === body.id);
+    if (!game) return res.status(404).json({ error: "Jeu introuvable." });
+    if (game.premium) {
+      const user = await inspectUser(body.idToken);
+      if (!user.ok) return res.status(401).json({ error: "Connecte-toi avec Google : " + user.reason });
+      const info = await premiumUntil(user.email);
+      if (!info.premium) return res.status(403).json({ error: "Ce jeu est réservé aux abonnés Premium." });
+    }
+    return res.status(200).json({ urls: game.downloadUrls || [] });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+};
+return module.exports;
+})();
 const handlers = {
+  premium: handlePremium,
+  download: handleDownload,
   games: handleGames,
   image: handleImage,
   notifications: handleNotifications,
