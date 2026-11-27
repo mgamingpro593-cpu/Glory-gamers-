@@ -135,10 +135,14 @@ function cleanGame(g) {
     cover: cleanMedia(g.cover) || logo || screenshots[0] || "",
     screenshots,
     downloadUrls: cleanLinks(g.downloadUrls, 5),
+    apkUrl: cleanUrl(g.apkUrl),
+    obbUrl: cleanUrl(g.obbUrl),
+    dataUrl: cleanUrl(g.dataUrl),
     minAndroid: num(g.minAndroid, 20),
     minRam: num(g.minRam, 64),
     recRam: num(g.recRam, 64),
     minStorage: num(g.minStorage, 200),
+    premium: g.premium === true || g.premium === "true" || g.premium === "on",
     createdAt: Date.now()
   };
 }
@@ -149,7 +153,13 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
   }
   try {
-    if (req.method === "GET") return res.status(200).json(await getJson(KEY, []));
+    if (req.method === "GET") {
+      const list = await getJson(KEY, []);
+      // les liens des jeux réservés aux abonnés ne sont jamais envoyés au public
+      return res.status(200).json(list.map(g => (g.premium
+        ? Object.assign({}, g, { downloadUrls: [], apkUrl: "", obbUrl: "", dataUrl: "" })
+        : g)));
+    }
     if (req.method === "POST") {
       const body = readBody(req);
       if (!(await verifyAdmin(body.idToken))) {
@@ -179,6 +189,11 @@ module.exports = async (req, res) => {
           const ids = [target.logo, target.cover].concat(target.screenshots || []).map(mediaId).filter(Boolean);
           await Promise.all([...new Set(ids)].map(id => redis(["DEL", "img:" + id])));
         }
+        return res.status(200).json({ ok: true });
+      }
+      if (body.action === "premium") {
+        const next = games.map(g => (g.id === body.id ? Object.assign({}, g, { premium: body.premium === true }) : g));
+        await setJson(KEY, next);
         return res.status(200).json({ ok: true });
       }
       return res.status(400).json({ error: "Action inconnue." });
@@ -473,7 +488,117 @@ const support = guard(async (body, res) => {
   return res.status(400).json({ error: "Action inconnue." });
 });
 
-return { me, users, support };
+// /api/online : compteur de visiteurs en ligne (battement toutes les 60 s) et chiffres pour l'admin
+const online = guard(async (body, res) => {
+  const now = Date.now();
+  if (body.action === "count") {
+    if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+    await redis(["ZREMRANGEBYSCORE", "glory_online", "-inf", String(now - 600000)]);
+    const [on, total] = await Promise.all([redis(["ZCOUNT", "glory_online", String(now - 120000), "+inf"]), redis(["HLEN", USERS])]);
+    return res.status(200).json({ online: Number(on) || 0, accounts: Number(total) || 0 });
+  }
+  const vid = String(body.vid || "");
+  if (!/^[a-z0-9]{8,40}$/i.test(vid)) return res.status(400).json({ error: "Identifiant invalide." });
+  const [, seq] = await Promise.all([redis(["ZADD", "glory_online", String(now), vid]), redis(["GET", "glory_chat_seq"])]);
+  if (Math.random() < 0.02) await redis(["ZREMRANGEBYSCORE", "glory_online", "-inf", String(now - 600000)]);
+  return res.status(200).json({ ok: true, chatSeq: Number(seq) || 0 });
+});
+
+// /api/chat : discussion publique (texte + photo). Lecture libre, écriture réservée aux connectés.
+const CHAT = "glory_chat";
+const CHAT_SEQ = "glory_chat_seq";
+const IMG_URL = /^\/api\/image\?id=[a-f0-9]{32}$/;
+const chat = guard(async (body, res) => {
+  if (body.action === "list") {
+    const after = Number(body.after) || 0;
+    const rows = (await redis(["LRANGE", CHAT, "0", "59"])) || [];
+    const items = rows.map(r => { try { return JSON.parse(r); } catch (e) { return null; } })
+      .filter(m => m && m.n > after).reverse();
+    const mine = readSession(body.session);
+    const emails = [...new Set(items.map(m => m.email))];
+    const found = emails.length ? (await redis(["HMGET", USERS, ...emails])) || [] : [];
+    const info = {};
+    emails.forEach((e, i) => {
+      let u = null;
+      try { u = found[i] ? JSON.parse(found[i]) : null; } catch (x) {}
+      info[e] = { plan: planOf(u || { email: e }), color: (u && u.badgeColor) || "blue" };
+    });
+    return res.status(200).json({
+      seq: items.length ? items[items.length - 1].n : after,
+      messages: items.map(m => ({
+        n: m.n, id: m.id, name: m.name, text: m.text, image: m.image || "", createdAt: m.createdAt,
+        plan: info[m.email].plan, badgeColor: info[m.email].color, mine: !!mine && m.email === mine
+      }))
+    });
+  }
+
+  if (body.action === "send") {
+    const who = await identify(body);
+    if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+    const msg = text(body.text, 500);
+    const image = IMG_URL.test(String(body.image || "")) ? String(body.image) : "";
+    if (!msg && !image) return res.status(400).json({ error: "Message vide." });
+    const free = await redis(["SET", "glory_rl:" + who.email, "1", "EX", "2", "NX"]);
+    if (!free) return res.status(429).json({ error: "Doucement : attends une seconde entre deux messages." });
+    const u = await getUser(who.email);
+    const n = Number(await redis(["INCR", CHAT_SEQ]));
+    const item = {
+      n, id: n.toString(36) + Math.random().toString(36).slice(2, 6), email: who.email,
+      name: text(who.name || (u && u.name) || who.email.split("@")[0], 40), text: msg, image, createdAt: Date.now()
+    };
+    await redis(["LPUSH", CHAT, JSON.stringify(item)]);
+    await redis(["LTRIM", CHAT, "0", "199"]);
+    return res.status(200).json({ ok: true, n });
+  }
+
+  if (body.action === "delete") {
+    if (!(await verifyAdmin(body.idToken))) return denyAdmin(res);
+    const rows = (await redis(["LRANGE", CHAT, "0", "199"])) || [];
+    const hit = rows.find(r => { try { return JSON.parse(r).id === body.id; } catch (e) { return false; } });
+    if (hit) await redis(["LREM", CHAT, "1", hit]);
+    return res.status(200).json({ ok: true });
+  }
+  return res.status(400).json({ error: "Action inconnue." });
+});
+
+// /api/chatimg : photo envoyée dans la discussion (réservée aux connectés, conservée 30 jours)
+const IMG_DATA = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+const chatimg = guard(async (body, res) => {
+  const who = await identify(body);
+  if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+  const dataUrl = String(body.dataUrl || "");
+  if (dataUrl.length > 420000) return res.status(413).json({ error: "Photo trop lourde." });
+  const m = IMG_DATA.exec(dataUrl);
+  if (!m) return res.status(400).json({ error: "Format invalide (PNG, JPEG ou WebP)." });
+  const free = await redis(["SET", "glory_rlimg:" + who.email, "1", "EX", "8", "NX"]);
+  if (!free) return res.status(429).json({ error: "Une photo à la fois : réessaie dans quelques secondes." });
+  const id = crypto.randomBytes(16).toString("hex");
+  await redis(["SET", "img:" + id, JSON.stringify({ mime: m[1], data: m[2] }), "EX", "2592000"]);
+  return res.status(200).json({ url: "/api/image?id=" + id });
+});
+
+// /api/download : liens de téléchargement d'un jeu ; pour un jeu Premium, seulement pour les abonnés
+const download = guard(async (body, res) => {
+  const games = await getJson("glory_games", []);
+  const game = games.find(g => g.id === body.id);
+  if (!game) return res.status(404).json({ error: "Jeu introuvable." });
+  if (game.premium) {
+    const who = await identify(body);
+    if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+    const u = await getUser(who.email);
+    if (planOf(u || { email: who.email }) === "free") return res.status(403).json({ error: "Ce jeu est réservé aux abonnés Premium." });
+  }
+  const files = [
+    ["Télécharger l'APK", game.apkUrl],
+    ["Télécharger l'OBB", game.obbUrl],
+    ["Télécharger les DATA", game.dataUrl]
+  ].filter(f => f[1]).map(f => ({ label: f[0], url: f[1] }));
+  const links = game.downloadUrls || [];
+  links.forEach((url, i) => files.push({ label: "Télécharger" + (links.length > 1 ? " (lien " + (i + 1) + ")" : ""), url }));
+  return res.status(200).json({ files });
+});
+
+return { me, users, support, online, chat, chatimg, download };
 })();
 const handlers = {
   games: handleGames,
@@ -482,7 +607,11 @@ const handlers = {
   status: handleStatus,
   me: extra.me,
   users: extra.users,
-  support: extra.support
+  support: extra.support,
+  online: extra.online,
+  chat: extra.chat,
+  chatimg: extra.chatimg,
+  download: extra.download
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.name) || "");

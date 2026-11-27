@@ -162,6 +162,12 @@ function renderGames(games) {
     platform.className = "game-platform";
     platform.textContent = String(game.platform || "").toUpperCase();
     imageBox.append(img, platform);
+    if (game.premium) {
+      const tag = document.createElement("span");
+      tag.textContent = "⭐ PREMIUM";
+      tag.style.cssText = "position:absolute;top:10px;right:10px;z-index:2;padding:5px 9px;border-radius:5px;font-size:9px;font-weight:700;background:linear-gradient(135deg,#f5b942,#f08a24);color:#1a1200";
+      imageBox.appendChild(tag);
+    }
 
     const info = document.createElement("div");
     info.className = "game-info";

@@ -2,6 +2,7 @@
 // Tout se règle ici :
 const AD_DIRECT_LINK = "https://ardance.org/4/cfd00f67c4c7385ff2c69b400955b213"; // "" pour désactiver
 const AD_EXTRA_SRC = "https://bellnewyork.org/14/3d34ad71de499262ce49bad8dbe75665"; // script de pub ; "" pour désactiver
+const AD_LOOP_MS = 18000; // le script de pub est rechargé toutes les 18 secondes, sans jamais s'arrêter (0 = une seule fois)
 
 (function () {
   let premium = false;
@@ -27,7 +28,13 @@ const AD_EXTRA_SRC = "https://bellnewyork.org/14/3d34ad71de499262ce49bad8dbe7566
       link.rel = "sponsored noopener noreferrer";
       link.textContent = "Offre sponsorisée ›";
 
-      section.append(label, link);
+      const promo = document.createElement("a");
+      promo.className = "ad-direct";
+      promo.href = "premium.html";
+      promo.textContent = "💎 Passe premium : sans publicité";
+      promo.style.cssText = "margin-right:8px;background:linear-gradient(135deg,#f5b942,#f08a24);color:#1a1200";
+
+      section.append(label, promo, link);
 
       const anchor = document.getElementById("popular");
       const footer = document.querySelector("footer");
@@ -135,6 +142,21 @@ const AD_EXTRA_SRC = "https://bellnewyork.org/14/3d34ad71de499262ce49bad8dbe7566
 
   refresh(false);
   window.addEventListener("auth-changed", () => { if (ready) refresh(true); });
+
+  // Pub en boucle : le script est rechargé toutes les AD_LOOP_MS tant que le visiteur n'est pas premium
+  if (AD_LOOP_MS > 0 && AD_EXTRA_SRC) {
+    setInterval(() => {
+      if (!ready || premium || document.hidden) return;
+      const old = document.getElementById("adExtra");
+      if (old) old.remove();
+      const extra = document.createElement("script");
+      extra.id = "adExtra";
+      extra.async = true;
+      extra.setAttribute("data-cfasync", "false");
+      extra.src = AD_EXTRA_SRC;
+      document.body.appendChild(extra);
+    }, AD_LOOP_MS);
+  }
 
   // La pub ne disparaît pas : si l'emplacement est retiré de la page, il est remis
   new MutationObserver(() => {
