@@ -41,9 +41,7 @@ function renderGame(game) {
   ].filter(f => safeUrl(f[1])).map(f => ({ label: f[0], url: safeUrl(f[1]) }));
   links.forEach((url, i) => files.push({ label: "Télécharger" + (links.length > 1 ? " (lien " + (i + 1) + ")" : ""), url }));
 
-  const downloadHTML = game.premium
-    ? '<button class="detail-download" data-premium="1">🔒 Télécharger (Premium) ↓</button>'
-    : files.length
+  const downloadHTML = files.length
     ? files.map(f => '<button class="detail-download" data-url="' + esc(f.url) + '">' + esc(f.label) + " ↓</button>").join("")
     : '<button class="detail-download" data-url="">Télécharger ↓</button>';
 
@@ -79,7 +77,6 @@ function renderGame(game) {
       coverHTML +
       '<div class="detail-head">' +
         '<span class="tag">' + esc(game.category) + '</span>' +
-        (game.premium ? ' <span class="tag" style="background:linear-gradient(135deg,#f5b942,#f08a24);color:#1a1200">⭐ Premium</span>' : '') +
         '<h1>' + esc(game.name) + '</h1>' +
         '<p class="detail-genre">' + esc(game.genre || game.category) + '</p>' +
         '<div class="detail-meta">' + meta + '</div>' +
@@ -95,9 +92,7 @@ function renderGame(game) {
   document.querySelectorAll(".detail-download").forEach(btn => {
     btn.addEventListener("click", () => {
       Auth.requireLogin(() => {
-        if (game.premium) {
-          premiumDownload(game);
-        } else if (btn.dataset.url) {
+        if (btn.dataset.url) {
           if (window.Ads && Ads.active()) {
             Ads.gate(btn.dataset.url, btn.textContent.replace(/ ↓$/, ""));
           } else {
@@ -123,69 +118,4 @@ function renderGame(game) {
   });
   lightbox.addEventListener("click", e => { if (e.target !== lightboxImg) closeLightbox(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
-}
-
-
-// Jeu réservé aux abonnés : le serveur donne les liens seulement aux abonnés
-function dlWindow(title, text, nodes) {
-  const old = document.getElementById("dlGate");
-  if (old) old.remove();
-
-  const modal = document.createElement("div");
-  modal.className = "dl-gate";
-  modal.id = "dlGate";
-  const box = document.createElement("div");
-  box.className = "dl-box";
-
-  const close = document.createElement("button");
-  close.className = "dl-close";
-  close.type = "button";
-  close.textContent = "✕";
-  close.setAttribute("aria-label", "Fermer");
-  const h = document.createElement("h3");
-  h.textContent = title;
-  const p = document.createElement("p");
-  p.className = "dl-sub";
-  p.textContent = text;
-
-  box.append(close, h, p);
-  nodes.forEach(n => box.appendChild(n));
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-
-  const stop = () => modal.remove();
-  close.addEventListener("click", stop);
-  modal.addEventListener("click", e => { if (e.target === modal) stop(); });
-}
-
-async function premiumDownload(game) {
-  try {
-    const data = await Account.api("/api/download", { id: game.id });
-    const files = data.files || [];
-    const nodes = files.map(f => {
-      const a = document.createElement("a");
-      a.className = "dl-go";
-      a.href = f.url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.style.cssText = "display:flex;align-items:center;justify-content:center;text-decoration:none";
-      a.textContent = "⬇ " + f.label;
-      return a;
-    });
-    dlWindow(
-      Prefs.t("Ton téléchargement"),
-      files.length ? game.name : Prefs.t("Aucun lien de téléchargement pour l'instant."),
-      nodes
-    );
-  } catch (e) {
-    const a = document.createElement("a");
-    a.className = "dl-premium";
-    a.href = "premium.html";
-    a.textContent = "💎 Voir les abonnements";
-    if (/Premium|réservé/i.test(e.message)) {
-      dlWindow(Prefs.t("Jeu réservé aux abonnés Premium"), Prefs.t("Abonne-toi pour télécharger ce jeu, sans publicité."), [a]);
-    } else {
-      alert(e.message);
-    }
-  }
 }

@@ -296,7 +296,7 @@ function renderList(games) {
     row.className = "admin-row";
 
     const name = document.createElement("span");
-    name.textContent = game.name + " · " + game.category + (game.premium ? " · ⭐ Premium" : "");
+    name.textContent = game.name + " · " + game.category;
 
     const actions = document.createElement("div");
     const view = document.createElement("a");
@@ -316,20 +316,7 @@ function renderList(games) {
       }
     });
 
-    const toggle = document.createElement("button");
-    toggle.style.cssText = "background:#29213f;color:#c8b4ff";
-    toggle.textContent = game.premium ? "Rendre gratuit" : "Mettre en Premium";
-    toggle.addEventListener("click", async () => {
-      const user = Auth.getUser();
-      try {
-        await post("/api/games", { action: "premium", id: game.id, premium: !game.premium, idToken: user && user.token });
-        loadList();
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-
-    actions.append(view, toggle, del);
+    actions.append(view, del);
     row.append(name, actions);
     list.appendChild(row);
   });
@@ -384,7 +371,6 @@ form.addEventListener("submit", async e => {
         apkUrl: data.get("apkUrl"),
         obbUrl: data.get("obbUrl"),
         dataUrl: data.get("dataUrl"),
-        premium: data.get("premium") === "on",
         logo,
         screenshots
       }
