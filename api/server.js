@@ -142,6 +142,7 @@ function cleanGame(g) {
     minRam: num(g.minRam, 64),
     recRam: num(g.recRam, 64),
     minStorage: num(g.minStorage, 200),
+    premium: g.premium === true || g.premium === "true" || g.premium === "on",
     createdAt: Date.now()
   };
 }
@@ -152,7 +153,13 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Base de données non configurée (Upstash Redis dans Vercel > Storage)." });
   }
   try {
-    if (req.method === "GET") return res.status(200).json(await getJson(KEY, []));
+    if (req.method === "GET") {
+      const list = await getJson(KEY, []);
+      // les liens des jeux réservés aux abonnés ne sont jamais envoyés au public
+      return res.status(200).json(list.map(g => (g.premium
+        ? Object.assign({}, g, { downloadUrls: [], apkUrl: "", obbUrl: "", dataUrl: "" })
+        : g)));
+    }
     if (req.method === "POST") {
       const body = readBody(req);
       if (!(await verifyAdmin(body.idToken))) {
@@ -182,6 +189,11 @@ module.exports = async (req, res) => {
           const ids = [target.logo, target.cover].concat(target.screenshots || []).map(mediaId).filter(Boolean);
           await Promise.all([...new Set(ids)].map(id => redis(["DEL", "img:" + id])));
         }
+        return res.status(200).json({ ok: true });
+      }
+      if (body.action === "premium") {
+        const next = games.map(g => (g.id === body.id ? Object.assign({}, g, { premium: body.premium === true }) : g));
+        await setJson(KEY, next);
         return res.status(200).json({ ok: true });
       }
       return res.status(400).json({ error: "Action inconnue." });
@@ -565,7 +577,28 @@ const chatimg = guard(async (body, res) => {
   return res.status(200).json({ url: "/api/image?id=" + id });
 });
 
-return { me, users, support, online, chat, chatimg };
+// /api/download : liens de téléchargement d'un jeu ; pour un jeu Premium, seulement pour les abonnés
+const download = guard(async (body, res) => {
+  const games = await getJson("glory_games", []);
+  const game = games.find(g => g.id === body.id);
+  if (!game) return res.status(404).json({ error: "Jeu introuvable." });
+  if (game.premium) {
+    const who = await identify(body);
+    if (!who) return res.status(401).json({ error: "Connexion requise : reconnecte-toi avec Google." });
+    const u = await getUser(who.email);
+    if (planOf(u || { email: who.email }) === "free") return res.status(403).json({ error: "Ce jeu est réservé aux abonnés Premium." });
+  }
+  const files = [
+    ["Télécharger l'APK", game.apkUrl],
+    ["Télécharger l'OBB", game.obbUrl],
+    ["Télécharger les DATA", game.dataUrl]
+  ].filter(f => f[1]).map(f => ({ label: f[0], url: f[1] }));
+  const links = game.downloadUrls || [];
+  links.forEach((url, i) => files.push({ label: "Télécharger" + (links.length > 1 ? " (lien " + (i + 1) + ")" : ""), url }));
+  return res.status(200).json({ files });
+});
+
+return { me, users, support, online, chat, chatimg, download };
 })();
 const handlers = {
   games: handleGames,
@@ -577,7 +610,8 @@ const handlers = {
   support: extra.support,
   online: extra.online,
   chat: extra.chat,
-  chatimg: extra.chatimg
+  chatimg: extra.chatimg,
+  download: extra.download
 };
 module.exports = async (req, res) => {
   const name = String((req.query && req.query.name) || "");
